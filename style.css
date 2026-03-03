@@ -186,6 +186,19 @@ body {
   background: var(--accent-hover);
 }
 
+/* LinkedIn icon-only button */
+.btn-linkedin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.btn-linkedin:hover {
+  opacity: 0.8;
+  transform: scale(1.1);
+}
+
 /* Divider */
 .divider {
   width: 100%;
