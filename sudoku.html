@@ -135,11 +135,8 @@
     .grid {
       display: grid;
       grid-template-columns: repeat(9, 1fr);
-      grid-template-rows: repeat(9, 1fr);
-      aspect-ratio: 1;
       border: 2.5px solid var(--grid-border);
       border-radius: 6px;
-      overflow: hidden;
       width: 100%;
       max-width: 405px;
     }
@@ -154,6 +151,12 @@
       font-weight: 700;
       position: relative;
     }
+
+    /* Round corner cells to match grid border-radius */
+    .cell[data-row="0"][data-col="0"] { border-radius: 4px 0 0 0; }
+    .cell[data-row="0"][data-col="8"] { border-radius: 0 4px 0 0; }
+    .cell[data-row="8"][data-col="0"] { border-radius: 0 0 0 4px; }
+    .cell[data-row="8"][data-col="8"] { border-radius: 0 0 4px 0; }
 
     /* Thick borders for 3x3 box separation */
     .cell[data-col="2"], .cell[data-col="5"] { border-right: 2.5px solid var(--grid-border); }
