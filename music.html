@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mood Radio – Alwin Thomas</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f9f8;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #0a66c2;
+      --accent-hover: #0854a5;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.07);
+      --toggle-bg: #e5e7eb;
+      --toggle-hover: #d1d5db;
+      --station-bg: #f3f4f6;
+      --station-hover: #e5e7eb;
+    }
+
+    [data-theme="dark"] {
+      --bg: #111111;
+      --surface: #1c1c1c;
+      --text: #f0ede8;
+      --muted: #9ca3af;
+      --border: #2e2e2e;
+      --shadow: 0 4px 24px rgba(0,0,0,0.45);
+      --toggle-bg: #2e2e2e;
+      --toggle-hover: #3a3a3a;
+      --station-bg: #242424;
+      --station-hover: #2e2e2e;
+    }
+
+    html { transition: background 0.2s, color 0.2s; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 3rem 1rem 3rem;
+    }
+
+    /* ── Back link ── */
+    .back-link {
+      position: fixed;
+      top: 1.1rem;
+      left: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: color 0.15s;
+      z-index: 10;
+    }
+    .back-link:hover { color: var(--text); }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1.2rem;
+      background: var(--toggle-bg);
+      border: none;
+      border-radius: 8px;
+      padding: 0.45rem 0.6rem;
+      cursor: pointer;
+      color: var(--text);
+      transition: background 0.15s;
+      z-index: 10;
+    }
+    .theme-toggle:hover { background: var(--toggle-hover); }
+    [data-theme="dark"] .icon-sun { display: block; }
+    [data-theme="dark"] .icon-moon { display: none; }
+    .icon-sun { display: none; }
+    .icon-moon { display: block; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2rem 2rem 2.25rem;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .card-header {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+
+    .card-header h1 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+    }
+
+    .card-header p {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    /* ── Mood chips ── */
+    .mood-label {
+      font-size: 0.83rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.65rem;
+    }
+
+    .mood-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.4rem;
+    }
+
+    .chip {
+      background: var(--station-bg);
+      border: 1.5px solid transparent;
+      border-radius: 999px;
+      padding: 0.4rem 0.95rem;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text);
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+
+    .chip:hover { background: var(--station-hover); }
+
+    .chip.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--station-bg);
+    }
+
+    /* ── Genre display ── */
+    .genre-section {
+      margin-bottom: 1.4rem;
+    }
+
+    .genre-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.65rem;
+      min-height: 2rem;
+    }
+
+    .genre-tag {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 6px;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    /* ── Search button ── */
+    .btn-search {
+      width: 100%;
+      padding: 0.65rem 1.4rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+      margin-bottom: 1.4rem;
+    }
+    .btn-search:hover { background: var(--accent-hover); }
+    .btn-search:active { transform: scale(0.98); }
+    .btn-search:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    /* ── Divider ── */
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0 0 1.4rem;
+    }
+
+    /* ── Status / loading ── */
+    .status {
+      font-size: 0.88rem;
+      text-align: center;
+      color: var(--muted);
+      min-height: 1.2rem;
+      margin-bottom: 0.75rem;
+    }
+
+    /* ── Station list ── */
+    .stations-label {
+      font-size: 0.83rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.65rem;
+    }
+
+    .station-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .station-card {
+      background: var(--station-bg);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border: 1.5px solid transparent;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .station-card:hover { background: var(--station-hover); }
+
+    .station-card.playing { border-color: var(--accent); }
+
+    .station-info { flex: 1; min-width: 0; }
+
+    .station-name {
+      font-size: 0.93rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .station-meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .play-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      flex-shrink: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .play-btn:hover { background: var(--accent-hover); }
+    .play-btn:active { transform: scale(0.93); }
+
+    /* now-playing indicator */
+    .now-playing {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-left: 0.5rem;
+    }
+    .now-playing span {
+      display: block;
+      width: 3px;
+      border-radius: 2px;
+      background: var(--accent);
+      animation: bar 0.9s ease-in-out infinite alternate;
+    }
+    .now-playing span:nth-child(1) { height: 8px; animation-delay: 0s; }
+    .now-playing span:nth-child(2) { height: 14px; animation-delay: 0.2s; }
+    .now-playing span:nth-child(3) { height: 6px; animation-delay: 0.4s; }
+    .now-playing span:nth-child(4) { height: 12px; animation-delay: 0.15s; }
+
+    @keyframes bar {
+      from { transform: scaleY(0.4); }
+      to   { transform: scaleY(1); }
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 1.5rem 0;
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 1.5rem 1.25rem 1.75rem; }
+      body { padding: 2.5rem 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Back link placeholder -->
+  <a class="back-link" href="#">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+    Home
+  </a>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  </button>
+
+  <main class="card">
+    <div class="card-header">
+      <h1>Mood Radio</h1>
+      <p>Pick a mood and discover live radio stations to match.</p>
+    </div>
+
+    <!-- Mood picker -->
+    <p class="mood-label">How are you feeling?</p>
+    <div class="mood-chips" id="mood-chips">
+      <button class="chip" data-mood="workout">💪 Workout</button>
+      <button class="chip" data-mood="relaxed">😌 Relaxed</button>
+      <button class="chip" data-mood="focused">🧠 Focused</button>
+      <button class="chip" data-mood="happy">😄 Happy</button>
+      <button class="chip" data-mood="sad">🌧 Sad</button>
+      <button class="chip" data-mood="party">🎉 Party</button>
+      <button class="chip" data-mood="romantic">❤️ Romantic</button>
+      <button class="chip" data-mood="sleepy">🌙 Sleepy</button>
+    </div>
+
+    <!-- Genre display -->
+    <div class="genre-section">
+      <p class="mood-label">Matching genres</p>
+      <div class="genre-tags" id="genre-tags">
+        <span style="color: var(--muted); font-size: 0.88rem;">Select a mood above to see genres.</span>
+      </div>
+    </div>
+
+    <button class="btn-search" id="search-btn" disabled>Find Stations</button>
+
+    <p class="status" id="status"></p>
+
+    <!-- Results -->
+    <div id="results-section" style="display:none;">
+      <hr />
+      <p class="stations-label">Live Stations</p>
+      <div class="station-list" id="station-list"></div>
+    </div>
+  </main>
+
+  <audio id="audio-player" preload="none"></audio>
+
+  <script>
+    // ── Dark mode ───────────────────────────────────────────────
+    const root = document.documentElement;
+    const toggleBtn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('theme');
+    if (saved) {
+      root.setAttribute('data-theme', saved);
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      root.setAttribute('data-theme', 'dark');
+    }
+    toggleBtn.addEventListener('click', () => {
+      const isDark = root.getAttribute('data-theme') === 'dark';
+      const next = isDark ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+
+    // ── Mood → genre map ─────────────────────────────────────────
+    const MOOD_GENRES = {
+      workout:  { tags: ['rock', 'metal', 'hip-hop'],          label: ['Rock', 'Metal', 'Hip-Hop'] },
+      relaxed:  { tags: ['jazz', 'ambient', 'classical'],       label: ['Jazz', 'Ambient', 'Classical'] },
+      focused:  { tags: ['classical', 'lofi', 'electronic'],   label: ['Classical', 'Lo-Fi', 'Electronic'] },
+      happy:    { tags: ['pop', 'reggae', 'funk'],              label: ['Pop', 'Reggae', 'Funk'] },
+      sad:      { tags: ['blues', 'indie', 'soul'],             label: ['Blues', 'Indie', 'Soul'] },
+      party:    { tags: ['dance', 'edm', 'pop'],                label: ['Dance', 'EDM', 'Pop'] },
+      romantic: { tags: ['jazz', 'soul', 'rnb'],                label: ['Jazz', 'Soul', 'R&B'] },
+      sleepy:   { tags: ['ambient', 'classical', 'acoustic'],   label: ['Ambient', 'Classical', 'Acoustic'] },
+    };
+
+    // ── State ─────────────────────────────────────────────────────
+    let selectedMood = null;
+    let currentStationUrl = null;
+    let currentPlayBtn = null;
+
+    const chipsEl     = document.getElementById('mood-chips');
+    const genreTagsEl = document.getElementById('genre-tags');
+    const searchBtn   = document.getElementById('search-btn');
+    const statusEl    = document.getElementById('status');
+    const resultsEl   = document.getElementById('results-section');
+    const stationList = document.getElementById('station-list');
+    const audio       = document.getElementById('audio-player');
+
+    // ── Chip selection ────────────────────────────────────────────
+    chipsEl.addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+
+      chipsEl.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      selectedMood = chip.dataset.mood;
+
+      const { label } = MOOD_GENRES[selectedMood];
+      genreTagsEl.innerHTML = label
+        .map(g => `<span class="genre-tag">${g}</span>`)
+        .join('');
+
+      searchBtn.disabled = false;
+      statusEl.textContent = '';
+    });
+
+    // ── Fetch stations ────────────────────────────────────────────
+    searchBtn.addEventListener('click', async () => {
+      if (!selectedMood) return;
+
+      const { tags } = MOOD_GENRES[selectedMood];
+      searchBtn.disabled = true;
+      statusEl.textContent = 'Searching for stations…';
+      resultsEl.style.display = 'none';
+      stationList.innerHTML = '';
+      stopAudio();
+
+      try {
+        // Pick a random tag from the genre list for variety
+        const tag = tags[Math.floor(Math.random() * tags.length)];
+        const url = `https://de1.api.radio-browser.info/json/stations/bytag/${encodeURIComponent(tag)}?limit=10&order=votes&reverse=true&hidebroken=true`;
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('API error');
+        const stations = await res.json();
+
+        if (!stations.length) {
+          statusEl.textContent = 'No stations found. Try a different mood.';
+          searchBtn.disabled = false;
+          return;
+        }
+
+        renderStations(stations, tag);
+        statusEl.textContent = '';
+        resultsEl.style.display = 'block';
+      } catch {
+        statusEl.textContent = 'Could not load stations. Check your connection and try again.';
+      }
+
+      searchBtn.disabled = false;
+    });
+
+    // ── Render stations ───────────────────────────────────────────
+    function renderStations(stations, tag) {
+      stationList.innerHTML = '';
+
+      stations.forEach((s) => {
+        const card = document.createElement('div');
+        card.className = 'station-card';
+        card.innerHTML = `
+          <div class="station-info">
+            <div class="station-name">${escHtml(s.name)}</div>
+            <div class="station-meta">${escHtml(s.country || '')}${s.country && s.bitrate ? ' · ' : ''}${s.bitrate ? s.bitrate + ' kbps' : ''}</div>
+          </div>
+          <button class="play-btn" aria-label="Play ${escHtml(s.name)}">
+            ${iconPlay()}
+          </button>
+        `;
+
+        const btn = card.querySelector('.play-btn');
+        btn.addEventListener('click', () => toggleStation(s, card, btn));
+        stationList.appendChild(card);
+      });
+    }
+
+    // ── Audio control ─────────────────────────────────────────────
+    function toggleStation(station, card, btn) {
+      if (currentStationUrl === station.url_resolved) {
+        stopAudio();
+        return;
+      }
+
+      stopAudio();
+      currentStationUrl = station.url_resolved;
+      currentPlayBtn = btn;
+
+      card.classList.add('playing');
+      btn.innerHTML = nowPlayingBars();
+
+      audio.src = station.url_resolved;
+      audio.play().catch(() => {
+        statusEl.textContent = 'Could not play this station. Try another one.';
+        stopAudio();
+      });
+    }
+
+    function stopAudio() {
+      audio.pause();
+      audio.src = '';
+      currentStationUrl = null;
+
+      document.querySelectorAll('.station-card').forEach(c => c.classList.remove('playing'));
+      document.querySelectorAll('.play-btn').forEach(b => { b.innerHTML = iconPlay(); });
+      currentPlayBtn = null;
+    }
+
+    audio.addEventListener('error', () => {
+      statusEl.textContent = 'Stream error. Try a different station.';
+      stopAudio();
+    });
+
+    // ── Helpers ───────────────────────────────────────────────────
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function iconPlay() {
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+        fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+    }
+
+    function nowPlayingBars() {
+      return `<div class="now-playing">
+        <span></span><span></span><span></span><span></span>
+      </div>`;
+    }
+  </script>
+</body>
+</html>
