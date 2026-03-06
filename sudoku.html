@@ -134,17 +134,20 @@
     /* Sudoku grid */
     .grid {
       display: grid;
-      grid-template-columns: repeat(9, 1fr);
-      grid-template-rows: repeat(9, 1fr);
+      /* minmax(0,1fr) instead of 1fr so tracks can shrink below content min-size */
+      grid-template-columns: repeat(9, minmax(0, 1fr));
+      grid-template-rows: repeat(9, minmax(0, 1fr));
       border: 2.5px solid var(--grid-border);
       border-radius: 6px;
-      /* Cap by viewport height so the grid never pushes buttons off-screen.
+      /* Cap by viewport height so buttons are always visible.
          24rem ≈ body + card padding + title + timer + buttons + gaps.
-         aspect-ratio:1 on the grid element itself is reliable on all browsers. */
+         aspect-ratio:1 on the grid element itself works on all browsers. */
       width: 100%;
       width: min(100%, calc(100svh - 24rem));
       max-width: 405px;
       aspect-ratio: 1;
+      min-width: 0;
+      overflow: hidden;
     }
 
     .cell {
@@ -155,6 +158,8 @@
       font-size: 1rem;
       font-weight: 700;
       position: relative;
+      min-width: 0;
+      min-height: 0;
     }
 
     /* Round corner cells to match grid border-radius */
@@ -175,6 +180,7 @@
     .cell input {
       width: 100%;
       height: 100%;
+      min-width: 0;
       border: none;
       outline: none;
       background: var(--cell-bg);
