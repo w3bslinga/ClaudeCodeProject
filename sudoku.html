@@ -135,6 +135,7 @@
     .grid {
       display: grid;
       grid-template-columns: repeat(9, 1fr);
+      grid-template-rows: repeat(9, 1fr);
       border: 2.5px solid var(--grid-border);
       border-radius: 6px;
       width: 100%;
@@ -233,9 +234,7 @@
 
     @media (max-width: 480px) {
       .card { padding: 1.5rem 1rem 2rem; }
-      /* Explicitly size cells by viewport width since Safari iOS ignores aspect-ratio on grid cells.
-         4rem = 1rem body padding each side + 1rem card padding each side */
-      .cell { font-size: 0.85rem; height: calc((100vw - 4rem) / 9); }
+      .cell { font-size: 0.85rem; }
       .cell input { font-size: 0.85rem; }
     }
 
@@ -433,6 +432,7 @@
           gridEl.appendChild(cell);
         }
       }
+      resizeGrid();
     }
 
     function onInput(e) {
@@ -545,6 +545,38 @@
     }
 
     document.getElementById('reset-btn').addEventListener('click', newGame);
+
+    // ── Grid sizing (Safari iOS ignores aspect-ratio on grid cells) ─
+    function resizeGrid() {
+      const card = document.querySelector('.card');
+      if (!card || !gridEl) return;
+
+      // Reset so we can measure the natural CSS width
+      gridEl.style.width = '';
+      gridEl.style.height = '';
+
+      const gridW = gridEl.getBoundingClientRect().width;
+
+      // Measure vertical space consumed by non-grid card children
+      const cardStyle = getComputedStyle(card);
+      const padV = parseFloat(cardStyle.paddingTop) + parseFloat(cardStyle.paddingBottom);
+      const gap = parseFloat(cardStyle.rowGap) || parseFloat(cardStyle.gap) || 20;
+      const numGaps = card.children.length - 1;
+      let otherH = 0;
+      for (const child of card.children) {
+        if (child !== gridEl) otherH += child.getBoundingClientRect().height;
+      }
+
+      const bodyStyle = getComputedStyle(document.body);
+      const bodyPadV = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+      const available = window.innerHeight - bodyPadV - padV - otherH - numGaps * gap - 8;
+
+      const size = Math.max(Math.min(gridW, available), 180);
+      gridEl.style.width = size + 'px';
+      gridEl.style.height = size + 'px';
+    }
+
+    window.addEventListener('resize', resizeGrid);
 
     // Start on load
     newGame();
