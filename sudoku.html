@@ -233,7 +233,9 @@
 
     @media (max-width: 480px) {
       .card { padding: 1.5rem 1rem 2rem; }
-      .cell { font-size: 0.85rem; }
+      /* Explicitly size cells by viewport width since Safari iOS ignores aspect-ratio on grid cells.
+         4rem = 1rem body padding each side + 1rem card padding each side */
+      .cell { font-size: 0.85rem; height: calc((100vw - 4rem) / 9); }
       .cell input { font-size: 0.85rem; }
     }
 
