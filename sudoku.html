@@ -569,14 +569,21 @@
 
       const bodyStyle = getComputedStyle(document.body);
       const bodyPadV = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
-      const available = window.innerHeight - bodyPadV - padV - otherH - numGaps * gap - 8;
+      // visualViewport.height accounts for iOS Safari's dynamic toolbar correctly
+      const vh = (window.visualViewport || window).height;
+      const available = vh - bodyPadV - padV - otherH - numGaps * gap - 8;
 
       const size = Math.max(Math.min(gridW, available), 180);
       gridEl.style.width = size + 'px';
       gridEl.style.height = size + 'px';
     }
 
-    window.addEventListener('resize', resizeGrid);
+    // Debounce resize so iOS finishes adjusting the viewport before we measure
+    let _resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(_resizeTimer);
+      _resizeTimer = setTimeout(resizeGrid, 150);
+    });
 
     // Start on load
     newGame();
