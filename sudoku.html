@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sudoku – Alwin Thomas</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f9f8;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #0a66c2;
+      --accent-hover: #0854a5;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.07);
+      --toggle-bg: #e5e7eb;
+      --toggle-hover: #d1d5db;
+      --cell-given: #1a1a1a;
+      --cell-input: #0a66c2;
+      --cell-error: #dc2626;
+      --cell-bg: #ffffff;
+      --cell-given-bg: #f3f4f6;
+      --grid-border: #374151;
+    }
+
+    [data-theme="dark"] {
+      --bg: #111111;
+      --surface: #1c1c1c;
+      --text: #f0ede8;
+      --muted: #9ca3af;
+      --border: #2e2e2e;
+      --shadow: 0 4px 24px rgba(0,0,0,0.45);
+      --toggle-bg: #2e2e2e;
+      --toggle-hover: #3a3a3a;
+      --cell-given: #f0ede8;
+      --cell-input: #60a5fa;
+      --cell-error: #f87171;
+      --cell-bg: #1c1c1c;
+      --cell-given-bg: #2a2a2a;
+      --grid-border: #9ca3af;
+    }
+
+    html { transition: background 0.2s, color 0.2s; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    /* Theme toggle */
+    .theme-toggle {
+      position: fixed;
+      top: 1.1rem;
+      right: 1.1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: var(--toggle-bg);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, transform 0.1s;
+      z-index: 100;
+    }
+    .theme-toggle:hover { background: var(--toggle-hover); }
+    .theme-toggle:active { transform: scale(0.92); }
+    .theme-toggle .icon-sun,
+    .theme-toggle .icon-moon { position: absolute; transition: opacity 0.2s, transform 0.2s; }
+    .theme-toggle .icon-moon { opacity: 0; transform: rotate(-30deg) scale(0.8); }
+    [data-theme="dark"] .theme-toggle .icon-sun { opacity: 0; transform: rotate(30deg) scale(0.8); }
+    [data-theme="dark"] .theme-toggle .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+    /* Back link */
+    .back-link {
+      position: fixed;
+      top: 1.2rem;
+      left: 1.2rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s;
+      z-index: 100;
+    }
+    .back-link:hover { color: var(--text); }
+
+    /* Main card */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2rem 2rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    /* Timer */
+    .timer {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+    .timer span { color: var(--text); }
+
+    /* Sudoku grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      border: 2.5px solid var(--grid-border);
+      border-radius: 6px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 405px;
+    }
+
+    .cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      font-size: 1rem;
+      font-weight: 700;
+      position: relative;
+    }
+
+    /* Thick borders for 3x3 box separation */
+    .cell[data-col="2"], .cell[data-col="5"] { border-right: 2.5px solid var(--grid-border); }
+    .cell[data-row="2"], .cell[data-row="5"] { border-bottom: 2.5px solid var(--grid-border); }
+
+    .cell.given {
+      background: var(--cell-given-bg);
+      color: var(--cell-given);
+    }
+
+    .cell input {
+      width: 100%;
+      height: 100%;
+      border: none;
+      outline: none;
+      background: var(--cell-bg);
+      color: var(--cell-input);
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: inherit;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.15s;
+      caret-color: transparent;
+    }
+
+    .cell input:focus {
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+    }
+
+    .cell input.error {
+      color: var(--cell-error);
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      padding: 0.55rem 1.4rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+    }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-reset {
+      background: var(--toggle-bg);
+      color: var(--text);
+    }
+    .btn-reset:hover { background: var(--toggle-hover); }
+
+    .btn-check {
+      background: var(--text);
+      color: var(--surface);
+    }
+    .btn-check:hover { opacity: 0.85; }
+
+    /* Status message */
+    .status {
+      font-size: 0.9rem;
+      font-weight: 600;
+      min-height: 1.2em;
+      text-align: center;
+    }
+    .status.success { color: #16a34a; }
+    .status.error { color: var(--cell-error); }
+    .status.info { color: var(--muted); }
+
+    @media (max-width: 480px) {
+      .card { padding: 1.5rem 1rem 2rem; }
+      .cell { font-size: 0.85rem; }
+      .cell input { font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <a class="back-link" href="index.html">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+    Home
+  </a>
+
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  </button>
+
+  <main class="card">
+    <h1>Sudoku</h1>
+    <div class="timer">Time: <span id="timer">0</span>s</div>
+    <div class="grid" id="grid"></div>
+    <div class="controls">
+      <button class="btn btn-reset" id="reset-btn">New Game</button>
+      <button class="btn btn-check" id="check-btn">Check</button>
+    </div>
+    <p class="status" id="status"></p>
+  </main>
+
+  <script>
+    // ── Dark mode ──────────────────────────────────────────────
+    const root = document.documentElement;
+    const toggleBtn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('theme');
+    if (saved) {
+      root.setAttribute('data-theme', saved);
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      root.setAttribute('data-theme', 'dark');
+    }
+    toggleBtn.addEventListener('click', () => {
+      const isDark = root.getAttribute('data-theme') === 'dark';
+      const next = isDark ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+
+    // ── Puzzles ────────────────────────────────────────────────
+    const PUZZLES = [
+      {
+        puzzle: [
+          [5,3,0,0,7,0,0,0,0],
+          [6,0,0,1,9,5,0,0,0],
+          [0,9,8,0,0,0,0,6,0],
+          [8,0,0,0,6,0,0,0,3],
+          [4,0,0,8,0,3,0,0,1],
+          [7,0,0,0,2,0,0,0,6],
+          [0,6,0,0,0,0,2,8,0],
+          [0,0,0,4,1,9,0,0,5],
+          [0,0,0,0,8,0,0,7,9]
+        ],
+        solution: [
+          [5,3,4,6,7,8,9,1,2],
+          [6,7,2,1,9,5,3,4,8],
+          [1,9,8,3,4,2,5,6,7],
+          [8,5,9,7,6,1,4,2,3],
+          [4,2,6,8,5,3,7,9,1],
+          [7,1,3,9,2,4,8,5,6],
+          [9,6,1,5,3,7,2,8,4],
+          [2,8,7,4,1,9,6,3,5],
+          [3,4,5,2,8,6,1,7,9]
+        ]
+      },
+      {
+        puzzle: [
+          [0,0,0,2,6,0,7,0,1],
+          [6,8,0,0,7,0,0,9,0],
+          [1,9,0,0,0,4,5,0,0],
+          [8,2,0,1,0,0,0,4,0],
+          [0,0,4,6,0,2,9,0,0],
+          [0,5,0,0,0,3,0,2,8],
+          [0,0,9,3,0,0,0,7,4],
+          [0,4,0,0,5,0,0,3,6],
+          [7,0,3,0,1,8,0,0,0]
+        ],
+        solution: [
+          [4,3,5,2,6,9,7,8,1],
+          [6,8,2,5,7,1,4,9,3],
+          [1,9,7,8,3,4,5,6,2],
+          [8,2,6,1,9,5,3,4,7],
+          [3,7,4,6,8,2,9,1,5],
+          [9,5,1,7,4,3,6,2,8],
+          [5,1,9,3,2,6,8,7,4],
+          [2,4,8,9,5,7,1,3,6],
+          [7,6,3,4,1,8,2,5,9]
+        ]
+      },
+      {
+        puzzle: [
+          [0,0,0,6,0,0,4,0,0],
+          [7,0,0,0,0,3,6,0,0],
+          [0,0,0,0,9,1,0,8,0],
+          [0,0,0,0,0,0,0,0,0],
+          [0,5,0,1,8,0,0,0,3],
+          [0,0,0,3,0,6,0,4,5],
+          [0,4,0,2,0,0,0,6,0],
+          [9,0,3,0,0,0,0,0,0],
+          [0,2,0,0,0,0,1,0,0]
+        ],
+        solution: [
+          [5,8,1,6,7,2,4,3,9],
+          [7,9,2,8,4,3,6,5,1],
+          [3,6,4,5,9,1,7,8,2],
+          [4,3,8,9,5,7,2,1,6],
+          [2,5,6,1,8,4,9,7,3],
+          [1,7,9,3,2,6,8,4,5],
+          [8,4,5,2,1,9,3,6,7],
+          [9,1,3,7,6,8,5,2,4],
+          [6,2,7,4,3,5,1,9,8]
+        ]
+      }
+    ];
+
+    // ── State ──────────────────────────────────────────────────
+    let currentPuzzle = null;
+    let currentSolution = null;
+    let timerInterval = null;
+    let seconds = 0;
+    let solved = false;
+
+    // ── Timer ──────────────────────────────────────────────────
+    const timerEl = document.getElementById('timer');
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      seconds = 0;
+      timerEl.textContent = '0';
+      timerInterval = setInterval(() => {
+        seconds++;
+        timerEl.textContent = seconds;
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+    }
+
+    // ── Build grid ─────────────────────────────────────────────
+    const gridEl = document.getElementById('grid');
+    const statusEl = document.getElementById('status');
+
+    function buildGrid(puzzle) {
+      gridEl.innerHTML = '';
+      for (let r = 0; r < 9; r++) {
+        for (let c = 0; c < 9; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+
+          const val = puzzle[r][c];
+          if (val !== 0) {
+            cell.classList.add('given');
+            cell.textContent = val;
+          } else {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.inputMode = 'numeric';
+            input.maxLength = 1;
+            input.setAttribute('aria-label', `Row ${r + 1}, Column ${c + 1}`);
+            input.addEventListener('keydown', onKeyDown);
+            input.addEventListener('input', onInput);
+            cell.appendChild(input);
+          }
+
+          gridEl.appendChild(cell);
+        }
+      }
+    }
+
+    function onInput(e) {
+      const input = e.target;
+      const v = input.value.replace(/[^1-9]/g, '');
+      input.value = v ? v[v.length - 1] : '';
+      input.classList.remove('error');
+      statusEl.textContent = '';
+      statusEl.className = 'status';
+
+      if (!solved) autoCheckWin();
+    }
+
+    function onKeyDown(e) {
+      const input = e.target;
+      const cell = input.closest('.cell');
+      const row = parseInt(cell.dataset.row);
+      const col = parseInt(cell.dataset.col);
+
+      const moves = {
+        ArrowUp:    [-1, 0],
+        ArrowDown:  [ 1, 0],
+        ArrowLeft:  [ 0,-1],
+        ArrowRight: [ 0, 1],
+      };
+
+      if (moves[e.key]) {
+        e.preventDefault();
+        const [dr, dc] = moves[e.key];
+        focusCell(row + dr, col + dc);
+      }
+
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        input.value = '';
+        input.classList.remove('error');
+      }
+    }
+
+    function focusCell(r, c) {
+      if (r < 0 || r > 8 || c < 0 || c > 8) return;
+      const target = gridEl.querySelector(`.cell[data-row="${r}"][data-col="${c}"] input`);
+      if (target) target.focus();
+    }
+
+    // ── Check ──────────────────────────────────────────────────
+    function checkSolution(silent = false) {
+      let allFilled = true;
+      let hasError = false;
+
+      const inputs = gridEl.querySelectorAll('input');
+      inputs.forEach(input => input.classList.remove('error'));
+
+      for (let r = 0; r < 9; r++) {
+        for (let c = 0; c < 9; c++) {
+          if (currentPuzzle[r][c] !== 0) continue;
+          const input = gridEl.querySelector(`.cell[data-row="${r}"][data-col="${c}"] input`);
+          const val = parseInt(input.value);
+          if (!val) {
+            allFilled = false;
+          } else if (val !== currentSolution[r][c]) {
+            input.classList.add('error');
+            hasError = true;
+          }
+        }
+      }
+
+      if (allFilled && !hasError) {
+        return true;
+      }
+
+      if (!silent) {
+        if (hasError) {
+          statusEl.textContent = 'Some cells are incorrect. Keep trying!';
+          statusEl.className = 'status error';
+        } else {
+          statusEl.textContent = 'Looking good so far — keep going!';
+          statusEl.className = 'status info';
+        }
+      }
+
+      return false;
+    }
+
+    function autoCheckWin() {
+      const win = checkSolution(true);
+      if (win) {
+        stopTimer();
+        solved = true;
+        statusEl.textContent = `Solved in ${seconds}s! Well done!`;
+        statusEl.className = 'status success';
+      }
+    }
+
+    document.getElementById('check-btn').addEventListener('click', () => {
+      if (!solved) checkSolution(false);
+    });
+
+    // ── New game ───────────────────────────────────────────────
+    function newGame() {
+      solved = false;
+      statusEl.textContent = '';
+      statusEl.className = 'status';
+
+      const pick = PUZZLES[Math.floor(Math.random() * PUZZLES.length)];
+      currentPuzzle = pick.puzzle;
+      currentSolution = pick.solution;
+
+      buildGrid(currentPuzzle);
+      startTimer();
+    }
+
+    document.getElementById('reset-btn').addEventListener('click', newGame);
+
+    // Start on load
+    newGame();
+  </script>
+</body>
+</html>

@@ -303,6 +303,24 @@ textarea:focus {
   color: #dc2626;
 }
 
+/* Sudoku teaser */
+.sudoku-teaser {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.sudoku-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.sudoku-link:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 520px) {
   .card {
     padding: 2rem 1.5rem;
