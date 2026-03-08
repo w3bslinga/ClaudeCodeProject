@@ -455,19 +455,22 @@
       try {
         // Pick a random tag from the genre list for variety
         const tag = tags[Math.floor(Math.random() * tags.length)];
-        const url = `https://de1.api.radio-browser.info/json/stations/bytag/${encodeURIComponent(tag)}?limit=10&order=votes&reverse=true&hidebroken=true`;
+        const url = `https://de1.api.radio-browser.info/json/stations/bytag/${encodeURIComponent(tag)}?limit=20&order=votes&reverse=true&hidebroken=true&ssl=true`;
 
         const res = await fetch(url);
         if (!res.ok) throw new Error('API error');
         const stations = await res.json();
 
-        if (!stations.length) {
+        // Filter to HTTPS streams only to avoid mixed-content blocks
+        const httpsStations = stations.filter(s => s.url_resolved && s.url_resolved.startsWith('https://'));
+
+        if (!httpsStations.length) {
           statusEl.textContent = 'No stations found. Try a different mood.';
           searchBtn.disabled = false;
           return;
         }
 
-        renderStations(stations, tag);
+        renderStations(httpsStations.slice(0, 10), tag);
         statusEl.textContent = '';
         resultsEl.style.display = 'block';
       } catch {
