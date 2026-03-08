@@ -325,6 +325,17 @@
       padding: 1.5rem 0;
     }
 
+    .stations-hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 0.65rem;
+      font-style: italic;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     @media (max-width: 480px) {
       .card { padding: 1.5rem 1.25rem 1.75rem; }
       body { padding: 2.5rem 0.75rem; }
@@ -393,6 +404,7 @@
     <div id="results-section" style="display:none;">
       <hr />
       <p class="stations-label">Live Stations</p>
+      <p class="stations-hint">Streams may take a few seconds to connect, especially on mobile.</p>
       <div class="station-list" id="station-list"></div>
     </div>
   </main>
@@ -465,10 +477,10 @@
 
       const { tags } = MOOD_GENRES[selectedMood];
       searchBtn.disabled = true;
+      stopAudio(); // stop first (clears currentStationUrl before any error can fire)
       statusEl.textContent = 'Searching for stations…';
       resultsEl.style.display = 'none';
       stationList.innerHTML = '';
-      stopAudio();
 
       try {
         // Pick a random tag from the genre list for variety
@@ -530,19 +542,31 @@
       currentPlayBtn = btn;
 
       card.classList.add('playing');
-      btn.innerHTML = nowPlayingBars();
+      btn.innerHTML = iconLoading(); // show buffering spinner first
+      statusEl.textContent = 'Connecting…';
 
       audio.src = station.url_resolved;
       audio.play().catch(() => {
-        statusEl.textContent = 'Could not play this station. Try another one.';
-        stopAudio();
+        if (currentStationUrl === station.url_resolved) {
+          statusEl.textContent = 'Could not play this station. Try another one.';
+          stopAudio();
+        }
       });
     }
 
+    // Switch to animated bars only once audio is actually streaming
+    audio.addEventListener('playing', () => {
+      if (currentPlayBtn) {
+        currentPlayBtn.innerHTML = nowPlayingBars();
+        statusEl.textContent = '';
+      }
+    });
+
     function stopAudio() {
       audio.pause();
-      audio.src = '';
-      currentStationUrl = null;
+      currentStationUrl = null; // clear BEFORE removing src to suppress error event
+      audio.removeAttribute('src');
+      audio.load();
 
       document.querySelectorAll('.station-card').forEach(c => c.classList.remove('playing'));
       document.querySelectorAll('.play-btn').forEach(b => { b.innerHTML = iconPlay(); });
@@ -550,6 +574,7 @@
     }
 
     audio.addEventListener('error', () => {
+      if (!currentStationUrl) return; // intentional stop — ignore
       statusEl.textContent = 'Stream error. Try a different station.';
       stopAudio();
     });
@@ -566,6 +591,15 @@
     function iconPlay() {
       return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
         fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+    }
+
+    function iconLoading() {
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"
+        style="animation: spin 0.8s linear infinite; display:block;">
+        <path d="M12 2a10 10 0 0 1 10 10" opacity="0.9"/>
+        <circle cx="12" cy="12" r="10" opacity="0.2"/>
+      </svg>`;
     }
 
     function nowPlayingBars() {
