@@ -461,16 +461,13 @@
         if (!res.ok) throw new Error('API error');
         const stations = await res.json();
 
-        // Filter to HTTPS streams only to avoid mixed-content blocks
-        const httpsStations = stations.filter(s => s.url_resolved && s.url_resolved.startsWith('https://'));
-
-        if (!httpsStations.length) {
+        if (!stations.length) {
           statusEl.textContent = 'No stations found. Try a different mood.';
           searchBtn.disabled = false;
           return;
         }
 
-        renderStations(httpsStations.slice(0, 10), tag);
+        renderStations(stations, tag);
         statusEl.textContent = '';
         resultsEl.style.display = 'block';
       } catch {
