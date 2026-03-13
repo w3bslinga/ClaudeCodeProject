@@ -622,6 +622,30 @@
     async function analyze() {
       if (!currentB64) return;
 
+      // Final safety check — clamp to 5 MB before sending no matter what
+      const MAX_SIZE = 5 * 1024 * 1024;
+      if (Math.ceil(currentB64.length * 3 / 4) > MAX_SIZE) {
+        const img = new Image();
+        await new Promise(resolve => {
+          img.onload = resolve;
+          img.src = previewImg.src;
+        });
+        let scale = 0.7, quality = 0.75;
+        let url, b64, bytes;
+        do {
+          const c = document.createElement('canvas');
+          c.width  = Math.floor(img.width  * scale);
+          c.height = Math.floor(img.height * scale);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          url = c.toDataURL('image/jpeg', quality);
+          b64 = url.split(',')[1];
+          bytes = Math.ceil(b64.length * 3 / 4);
+          scale   *= 0.85;
+          quality  = Math.max(0.3, quality - 0.08);
+        } while (bytes > MAX_SIZE && scale > 0.05);
+        currentB64 = b64;
+      }
+
       // Loading state
       analyzeBtn.classList.add('loading');
       analyzeBtn.innerHTML = '<div class="spinner"></div> Analyzing…';
