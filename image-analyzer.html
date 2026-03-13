@@ -538,41 +538,43 @@
       currentFile = file;
       const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
 
-      if (file.size > MAX_SIZE) {
-        // Auto-resize using canvas — loop until output is actually under 5 MB
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          URL.revokeObjectURL(url);
-          let scale = Math.sqrt(MAX_SIZE / file.size) * 0.8;
-          let quality = 0.82;
-          let dataUrl, b64, approxBytes;
-          do {
-            const canvas = document.createElement('canvas');
-            canvas.width  = Math.floor(img.width  * scale);
-            canvas.height = Math.floor(img.height * scale);
-            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-            dataUrl = canvas.toDataURL('image/jpeg', quality);
-            b64 = dataUrl.split(',')[1];
-            approxBytes = Math.ceil(b64.length * 3 / 4);
-            scale  *= 0.85;
-            quality = Math.max(0.4, quality - 0.08);
-          } while (approxBytes > MAX_SIZE && scale > 0.05);
+      // Always read the file first, then check the ACTUAL decoded size
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        const b64 = dataUrl.split(',')[1];
+        const actualBytes = Math.ceil(b64.length * 3 / 4);
+
+        if (actualBytes > MAX_SIZE) {
+          // Resize using canvas until it genuinely fits
+          const img = new Image();
+          img.onload = () => {
+            let scale = Math.sqrt(MAX_SIZE / actualBytes) * 0.8;
+            let quality = 0.82;
+            let resizedUrl, resizedB64, resizedBytes;
+            do {
+              const canvas = document.createElement('canvas');
+              canvas.width  = Math.floor(img.width  * scale);
+              canvas.height = Math.floor(img.height * scale);
+              canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+              resizedUrl  = canvas.toDataURL('image/jpeg', quality);
+              resizedB64  = resizedUrl.split(',')[1];
+              resizedBytes = Math.ceil(resizedB64.length * 3 / 4);
+              scale   *= 0.85;
+              quality  = Math.max(0.4, quality - 0.08);
+            } while (resizedBytes > MAX_SIZE && scale > 0.05);
+            currentB64 = resizedB64;
+            previewImg.src = resizedUrl;
+            previewWrap.classList.add('visible');
+            previewName.textContent = file.name + ' · Resized to fit 5 MB limit';
+            uploadPrompt.style.display = 'none';
+            dropZone.classList.add('has-image');
+            analyzeBtn.disabled = false;
+            hideResults();
+          };
+          img.src = dataUrl;
+        } else {
           currentB64 = b64;
-          previewImg.src = dataUrl;
-          previewWrap.classList.add('visible');
-          previewName.textContent = file.name + ' · Resized to fit 5 MB limit';
-          uploadPrompt.style.display = 'none';
-          dropZone.classList.add('has-image');
-          analyzeBtn.disabled = false;
-          hideResults();
-        };
-        img.src = url;
-      } else {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const dataUrl = e.target.result;
-          currentB64 = dataUrl.split(',')[1];
           previewImg.src = dataUrl;
           previewWrap.classList.add('visible');
           previewName.textContent = file.name + ' · ' + formatBytes(file.size);
@@ -580,9 +582,9 @@
           dropZone.classList.add('has-image');
           analyzeBtn.disabled = false;
           hideResults();
-        };
-        reader.readAsDataURL(file);
-      }
+        }
+      };
+      reader.readAsDataURL(file);
     }
 
     previewRemove.addEventListener('click', (e) => {
