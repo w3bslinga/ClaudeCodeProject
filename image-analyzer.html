@@ -417,7 +417,7 @@
         </svg>
       </div>
       <h1>Image Analyzer</h1>
-      <p class="subtitle" style="font-size:0.78rem; margin-top:0.3rem; color: var(--muted);">Max image size: 5 MB</p>
+      <p class="subtitle" style="font-size:0.78rem; margin-top:0.3rem; color: var(--muted);">Max image size: 3.75 MB · Larger images auto-resized</p>
     </div>
 
     <!-- Drop zone -->
@@ -547,37 +547,35 @@
 
     function loadFile(file) {
       currentFile = file;
-      const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+      // API measures base64 string length — 5 MB base64 = ~3.75 MB raw image
+      const MAX_B64 = 5 * 1024 * 1024;
 
-      // Always read the file first, then check the ACTUAL decoded size
       const reader = new FileReader();
       reader.onload = (e) => {
         const dataUrl = e.target.result;
         const b64 = dataUrl.split(',')[1];
-        const actualBytes = Math.ceil(b64.length * 3 / 4);
 
-        if (actualBytes > MAX_SIZE) {
-          // Resize using canvas until it genuinely fits
+        if (b64.length > MAX_B64) {
+          // Resize until the base64 string itself is under 5 MB
           const img = new Image();
           img.onload = () => {
-            let scale = Math.sqrt(MAX_SIZE / actualBytes) * 0.8;
+            let scale = Math.sqrt(MAX_B64 / b64.length) * 0.8;
             let quality = 0.82;
-            let resizedUrl, resizedB64, resizedBytes;
+            let resizedUrl, resizedB64;
             do {
               const canvas = document.createElement('canvas');
               canvas.width  = Math.floor(img.width  * scale);
               canvas.height = Math.floor(img.height * scale);
               canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-              resizedUrl  = canvas.toDataURL('image/jpeg', quality);
-              resizedB64  = resizedUrl.split(',')[1];
-              resizedBytes = Math.ceil(resizedB64.length * 3 / 4);
+              resizedUrl = canvas.toDataURL('image/jpeg', quality);
+              resizedB64 = resizedUrl.split(',')[1];
               scale   *= 0.85;
               quality  = Math.max(0.4, quality - 0.08);
-            } while (resizedBytes > MAX_SIZE && scale > 0.05);
+            } while (resizedB64.length > MAX_B64 && scale > 0.05);
             currentB64 = resizedB64;
             previewImg.src = resizedUrl;
             previewWrap.classList.add('visible');
-            previewName.textContent = file.name + ' · Resized to fit 5 MB limit';
+            previewName.textContent = file.name + ' · Resized to fit limit';
             uploadPrompt.style.display = 'none';
             dropZone.classList.add('has-image');
             analyzeBtn.disabled = false;
@@ -633,16 +631,16 @@
     async function analyze() {
       if (!currentB64) return;
 
-      // Final safety check — clamp to 5 MB before sending no matter what
-      const MAX_SIZE = 5 * 1024 * 1024;
-      if (Math.ceil(currentB64.length * 3 / 4) > MAX_SIZE) {
+      // Final safety check — API measures base64 string length, must be under 5 MB
+      const MAX_B64 = 5 * 1024 * 1024;
+      if (currentB64.length > MAX_B64) {
         const img = new Image();
         await new Promise(resolve => {
           img.onload = resolve;
           img.src = previewImg.src;
         });
         let scale = 0.7, quality = 0.75;
-        let url, b64, bytes;
+        let url, b64;
         do {
           const c = document.createElement('canvas');
           c.width  = Math.floor(img.width  * scale);
@@ -650,10 +648,9 @@
           c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
           url = c.toDataURL('image/jpeg', quality);
           b64 = url.split(',')[1];
-          bytes = Math.ceil(b64.length * 3 / 4);
           scale   *= 0.85;
           quality  = Math.max(0.3, quality - 0.08);
-        } while (bytes > MAX_SIZE && scale > 0.05);
+        } while (b64.length > MAX_B64 && scale > 0.05);
         currentB64 = b64;
       }
 
