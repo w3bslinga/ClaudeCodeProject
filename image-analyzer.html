@@ -596,7 +596,7 @@
 
       try {
         const mediaType = currentFile?.type || 'image/jpeg';
-        const res = await fetch('/analyze', {
+        const res = await fetch('https://claudecodeproject.onrender.com/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
