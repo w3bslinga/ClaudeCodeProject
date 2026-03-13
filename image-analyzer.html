@@ -506,8 +506,9 @@
     const uploadPrompt  = document.getElementById('upload-prompt');
     const analyzeBtn    = document.getElementById('analyze-btn');
 
-    let currentFile = null;
-    let currentB64  = null;
+    let currentFile      = null;
+    let currentB64       = null;
+    let currentMediaType = null;
 
     browseBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
     dropZone.addEventListener('click', (e) => {
@@ -572,7 +573,8 @@
               scale   *= 0.85;
               quality  = Math.max(0.4, quality - 0.08);
             } while (resizedB64.length > MAX_B64 && scale > 0.05);
-            currentB64 = resizedB64;
+            currentB64       = resizedB64;
+            currentMediaType = 'image/jpeg';
             previewImg.src = resizedUrl;
             previewWrap.classList.add('visible');
             previewName.textContent = file.name + ' · Resized to fit limit';
@@ -583,7 +585,8 @@
           };
           img.src = dataUrl;
         } else {
-          currentB64 = b64;
+          currentB64       = b64;
+          currentMediaType = file.type;
           previewImg.src = dataUrl;
           previewWrap.classList.add('visible');
           previewName.textContent = file.name + ' · ' + formatBytes(file.size);
@@ -602,8 +605,9 @@
     });
 
     function resetDropZone() {
-      currentFile = null;
-      currentB64  = null;
+      currentFile      = null;
+      currentB64       = null;
+      currentMediaType = null;
       previewWrap.classList.remove('visible');
       previewImg.src = '';
       previewName.textContent = '';
@@ -651,7 +655,8 @@
           scale   *= 0.85;
           quality  = Math.max(0.3, quality - 0.08);
         } while (b64.length > MAX_B64 && scale > 0.05);
-        currentB64 = b64;
+        currentB64       = b64;
+        currentMediaType = 'image/jpeg';
       }
 
       // Loading state
@@ -661,7 +666,7 @@
       hideResults();
 
       try {
-        const mediaType = currentFile?.type || 'image/jpeg';
+        const mediaType = currentMediaType || 'image/jpeg';
         const res = await fetch('https://claudecodeproject.onrender.com/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
