@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Analyzer — Alwin Thomas</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f9f8;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #0a66c2;
+      --accent-hover: #0854a5;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.07);
+      --toggle-bg: #e5e7eb;
+      --toggle-hover: #d1d5db;
+      --drop-bg: #f0f6ff;
+      --drop-border: #93c5fd;
+      --success: #16a34a;
+      --error: #dc2626;
+      --tag-bg: #eff6ff;
+      --tag-text: #1d4ed8;
+    }
+    [data-theme="dark"] {
+      --bg: #111111;
+      --surface: #1c1c1c;
+      --text: #f0ede8;
+      --muted: #9ca3af;
+      --border: #2e2e2e;
+      --shadow: 0 4px 24px rgba(0,0,0,0.45);
+      --toggle-bg: #2e2e2e;
+      --toggle-hover: #3a3a3a;
+      --drop-bg: #1a2233;
+      --drop-border: #3b82f6;
+      --tag-bg: #1e3a5f;
+      --tag-text: #93c5fd;
+    }
+
+    html { transition: background 0.2s, color 0.2s; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 4rem;
+      line-height: 1.6;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    /* ── Back link ── */
+    .back-link {
+      position: fixed;
+      top: 1.1rem;
+      left: 1.1rem;
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: color 0.15s;
+      z-index: 100;
+    }
+    .back-link:hover { color: var(--accent); }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      position: fixed;
+      top: 1.1rem;
+      right: 1.1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: var(--toggle-bg);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, transform 0.1s;
+      z-index: 100;
+    }
+    .theme-toggle:hover { background: var(--toggle-hover); }
+    .theme-toggle:active { transform: scale(0.92); }
+    .theme-toggle .icon-sun,
+    .theme-toggle .icon-moon {
+      position: absolute;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .theme-toggle .icon-moon { opacity: 0; transform: rotate(-30deg) scale(0.8); }
+    [data-theme="dark"] .theme-toggle .icon-sun { opacity: 0; transform: rotate(30deg) scale(0.8); }
+    [data-theme="dark"] .theme-toggle .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2.5rem 2rem;
+      max-width: 560px;
+      width: 100%;
+      margin-top: 1rem;
+    }
+
+    .card-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .icon-wrap {
+      width: 56px;
+      height: 56px;
+      background: var(--drop-bg);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .icon-wrap svg { color: var(--accent); }
+
+    h1 {
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.3rem;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 2.25rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      background: transparent;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .drop-zone.drag-over {
+      border-color: var(--drop-border);
+      background: var(--drop-bg);
+    }
+    .drop-zone.has-image {
+      border-color: var(--drop-border);
+      padding: 1rem;
+    }
+    .drop-icon {
+      width: 44px;
+      height: 44px;
+      margin: 0 auto 0.85rem;
+      color: var(--muted);
+      transition: color 0.2s;
+    }
+    .drop-zone.drag-over .drop-icon { color: var(--accent); }
+    .drop-text {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.3rem;
+    }
+    .drop-hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 1.1rem;
+    }
+    .drop-hint span { color: var(--accent); font-weight: 600; }
+
+    .browse-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1.2rem;
+      border: 1.5px solid var(--accent);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .browse-btn:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Hidden file input */
+    #file-input { display: none; }
+
+    /* ── Image preview ── */
+    .preview-wrap {
+      position: relative;
+      display: none;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+    .preview-wrap.visible { display: block; }
+    .preview-img {
+      width: 100%;
+      max-height: 320px;
+      object-fit: contain;
+      display: block;
+      border-radius: 10px;
+      background: var(--bg);
+    }
+    .preview-remove {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      line-height: 1;
+      transition: background 0.15s;
+    }
+    .preview-remove:hover { background: rgba(0,0,0,0.8); }
+    .preview-name {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 0.4rem;
+    }
+
+    /* ── Analyze button ── */
+    .analyze-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 1.25rem;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s, transform 0.1s;
+    }
+    .analyze-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .analyze-btn:active:not(:disabled) { transform: scale(0.98); }
+    .analyze-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .analyze-btn.loading { pointer-events: none; }
+
+    /* Spinner */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Results ── */
+    .results-section {
+      display: none;
+      margin-top: 1.5rem;
+      animation: fadeIn 0.3s ease;
+    }
+    .results-section.visible { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+      margin: 1.5rem 0 1.25rem;
+    }
+
+    .results-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .results-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .result-text {
+      font-size: 0.925rem;
+      color: var(--text);
+      line-height: 1.75;
+      white-space: pre-wrap;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+    }
+
+    .result-error {
+      font-size: 0.9rem;
+      color: var(--error);
+      background: #fef2f2;
+      border: 1.5px solid #fecaca;
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+    }
+    [data-theme="dark"] .result-error {
+      background: #2d1515;
+      border-color: #7f1d1d;
+    }
+
+    /* Tags row */
+    .tags-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.85rem;
+    }
+    .tag {
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      border-radius: 999px;
+      padding: 0.2rem 0.7rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    /* Copy button */
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.75rem;
+      padding: 0.4rem 0.85rem;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-btn.copied { color: var(--success); border-color: var(--success); }
+
+    /* ── Responsive ── */
+    @media (max-width: 520px) {
+      .card { padding: 1.75rem 1.25rem; }
+      h1 { font-size: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Back link -->
+  <a href="index.html" class="back-link">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </a>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  </button>
+
+  <main class="card">
+    <!-- Header -->
+    <div class="card-header">
+      <div class="icon-wrap">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+      </div>
+      <h1>Image Analyzer</h1>
+      <p class="subtitle">Drop an image and Claude will identify what it is</p>
+    </div>
+
+    <!-- Drop zone -->
+    <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="Drop image here or click to browse">
+
+      <!-- Preview (hidden until image loaded) -->
+      <div class="preview-wrap" id="preview-wrap">
+        <img class="preview-img" id="preview-img" alt="Image preview" />
+        <button class="preview-remove" id="preview-remove" aria-label="Remove image">✕</button>
+      </div>
+      <p class="preview-name" id="preview-name"></p>
+
+      <!-- Upload prompt (hidden when image loaded) -->
+      <div id="upload-prompt">
+        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p class="drop-text">Drag &amp; drop an image here</p>
+        <p class="drop-hint">or <span>browse</span> your files &amp; photos</p>
+        <button class="browse-btn" type="button" id="browse-btn" aria-label="Browse files">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Choose Image
+        </button>
+      </div>
+
+      <!-- Hidden file input — accept="image/*" opens Photos app on iOS/Android -->
+      <input
+        type="file"
+        id="file-input"
+        accept="image/*"
+        aria-hidden="true"
+      />
+    </div>
+
+    <!-- Analyze button -->
+    <button class="analyze-btn" id="analyze-btn" disabled aria-label="Analyze image">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+      </svg>
+      Analyze Image
+    </button>
+
+    <!-- Results -->
+    <div class="results-section" id="results-section">
+      <div class="divider"></div>
+      <p class="results-label">Analysis</p>
+      <div id="result-content"></div>
+      <div class="tags-row" id="tags-row"></div>
+      <button class="copy-btn" id="copy-btn" aria-label="Copy result text">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy
+      </button>
+    </div>
+  </main>
+
+  <script>
+    // ── Theme ──────────────────────────────────────────────────────
+    const root = document.documentElement;
+    const toggleBtn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme', 'dark');
+    toggleBtn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+
+    // ── File / image handling ──────────────────────────────────────
+    const dropZone      = document.getElementById('drop-zone');
+    const fileInput     = document.getElementById('file-input');
+    const browseBtn     = document.getElementById('browse-btn');
+    const previewWrap   = document.getElementById('preview-wrap');
+    const previewImg    = document.getElementById('preview-img');
+    const previewRemove = document.getElementById('preview-remove');
+    const previewName   = document.getElementById('preview-name');
+    const uploadPrompt  = document.getElementById('upload-prompt');
+    const analyzeBtn    = document.getElementById('analyze-btn');
+
+    let currentFile = null;
+    let currentB64  = null;
+
+    browseBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+    dropZone.addEventListener('click', (e) => {
+      if (!e.target.closest('#browse-btn') && !e.target.closest('#preview-remove')) fileInput.click();
+    });
+    dropZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+
+    // Drag & Drop
+    ['dragenter','dragover'].forEach(evt => {
+      dropZone.addEventListener(evt, (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    });
+    ['dragleave','dragend'].forEach(evt => {
+      dropZone.addEventListener(evt, () => dropZone.classList.remove('drag-over'));
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer?.files?.[0];
+      if (file && file.type.startsWith('image/')) loadFile(file);
+    });
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      if (file) loadFile(file);
+    });
+
+    function loadFile(file) {
+      currentFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        // Extract base64 portion
+        currentB64 = dataUrl.split(',')[1];
+        previewImg.src = dataUrl;
+        previewWrap.classList.add('visible');
+        previewName.textContent = file.name + ' · ' + formatBytes(file.size);
+        uploadPrompt.style.display = 'none';
+        dropZone.classList.add('has-image');
+        analyzeBtn.disabled = false;
+        // Reset results
+        hideResults();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    previewRemove.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetDropZone();
+    });
+
+    function resetDropZone() {
+      currentFile = null;
+      currentB64  = null;
+      previewWrap.classList.remove('visible');
+      previewImg.src = '';
+      previewName.textContent = '';
+      uploadPrompt.style.display = '';
+      dropZone.classList.remove('has-image');
+      fileInput.value = '';
+      analyzeBtn.disabled = true;
+      hideResults();
+    }
+
+    function formatBytes(b) {
+      if (b < 1024) return b + ' B';
+      if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+      return (b / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    // ── Analyze ────────────────────────────────────────────────────
+    const resultsSection = document.getElementById('results-section');
+    const resultContent  = document.getElementById('result-content');
+    const tagsRow        = document.getElementById('tags-row');
+    const copyBtn        = document.getElementById('copy-btn');
+
+    analyzeBtn.addEventListener('click', analyze);
+
+    async function analyze() {
+      if (!currentB64) return;
+
+      // Loading state
+      analyzeBtn.classList.add('loading');
+      analyzeBtn.innerHTML = '<div class="spinner"></div> Analyzing…';
+      analyzeBtn.disabled = true;
+      hideResults();
+
+      try {
+        const mediaType = currentFile?.type || 'image/jpeg';
+        const res = await fetch('/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image: currentB64,
+            mediaType,
+            prompt: 'Analyze this image in detail. Start with a bold one-line title (what this is), then provide a thorough description covering: what it is, key features and characteristics, likely context or setting, and any interesting facts or details you can observe. Be informative and engaging.'
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Analysis failed');
+
+        showResult(data.result);
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        analyzeBtn.classList.remove('loading');
+        analyzeBtn.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg> Analyze Again`;
+        analyzeBtn.disabled = false;
+      }
+    }
+
+    function showResult(text) {
+      // Parse **bold title** if present (first line)
+      const lines = text.split('\n');
+      const firstLine = lines[0].replace(/^\*\*|\*\*$/g, '').trim();
+      const rest = lines.slice(1).join('\n').trim();
+
+      resultContent.innerHTML = `<div class="result-text">${escHtml(rest || text)}</div>`;
+
+      // Auto-generate tags from first line keywords
+      const words = firstLine.split(/\s+/).filter(w => w.length > 3).slice(0, 4);
+      tagsRow.innerHTML = words.map(w => `<span class="tag">${escHtml(w.replace(/[^a-zA-Z0-9\s]/g, ''))}</span>`).join('');
+
+      resultsSection.classList.add('visible');
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function showError(msg) {
+      resultContent.innerHTML = `<div class="result-error">⚠️ ${escHtml(msg)}</div>`;
+      tagsRow.innerHTML = '';
+      resultsSection.classList.add('visible');
+    }
+
+    function hideResults() {
+      resultsSection.classList.remove('visible');
+      resultContent.innerHTML = '';
+      tagsRow.innerHTML = '';
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Copy button ────────────────────────────────────────────────
+    copyBtn.addEventListener('click', () => {
+      const text = resultContent.querySelector('.result-text')?.innerText || '';
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtn.classList.add('copied');
+        copyBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+        setTimeout(() => {
+          copyBtn.classList.remove('copied');
+          copyBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
+        }, 2000);
+      });
+    });
+  </script>
+</body>
+</html>
