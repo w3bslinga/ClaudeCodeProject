@@ -453,7 +453,7 @@
       <input
         type="file"
         id="file-input"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/gif,image/webp"
         aria-hidden="true"
       />
     </div>
@@ -522,16 +522,27 @@
     ['dragleave','dragend'].forEach(evt => {
       dropZone.addEventListener(evt, () => dropZone.classList.remove('drag-over'));
     });
+    const ALLOWED_TYPES = ['image/jpeg','image/png','image/gif','image/webp'];
     dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
       dropZone.classList.remove('drag-over');
       const file = e.dataTransfer?.files?.[0];
-      if (file && file.type.startsWith('image/')) loadFile(file);
+      if (!file) return;
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        showError('Unsupported file type. Please upload a JPEG, PNG, GIF, or WebP image.');
+        return;
+      }
+      loadFile(file);
     });
 
     fileInput.addEventListener('change', () => {
       const file = fileInput.files?.[0];
-      if (file) loadFile(file);
+      if (!file) return;
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        showError('Unsupported file type. Please upload a JPEG, PNG, GIF, or WebP image.');
+        return;
+      }
+      loadFile(file);
     });
 
     function loadFile(file) {
