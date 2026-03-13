@@ -418,6 +418,7 @@
       </div>
       <h1>Image Analyzer</h1>
       <p class="subtitle">Drop an image and Claude will identify what it is</p>
+      <p class="subtitle" style="font-size:0.78rem; margin-top:0.3rem; color: var(--muted);">Max image size: 5 MB</p>
     </div>
 
     <!-- Drop zone -->
@@ -536,21 +537,45 @@
 
     function loadFile(file) {
       currentFile = file;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target.result;
-        // Extract base64 portion
-        currentB64 = dataUrl.split(',')[1];
-        previewImg.src = dataUrl;
-        previewWrap.classList.add('visible');
-        previewName.textContent = file.name + ' · ' + formatBytes(file.size);
-        uploadPrompt.style.display = 'none';
-        dropZone.classList.add('has-image');
-        analyzeBtn.disabled = false;
-        // Reset results
-        hideResults();
-      };
-      reader.readAsDataURL(file);
+      const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+
+      if (file.size > MAX_SIZE) {
+        // Auto-resize using canvas before sending
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const scale = Math.sqrt(MAX_SIZE / file.size) * 0.9;
+          const canvas = document.createElement('canvas');
+          canvas.width  = Math.floor(img.width  * scale);
+          canvas.height = Math.floor(img.height * scale);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          currentB64 = dataUrl.split(',')[1];
+          previewImg.src = dataUrl;
+          previewWrap.classList.add('visible');
+          previewName.textContent = file.name + ' · Resized to fit 5 MB limit';
+          uploadPrompt.style.display = 'none';
+          dropZone.classList.add('has-image');
+          analyzeBtn.disabled = false;
+          hideResults();
+        };
+        img.src = url;
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target.result;
+          currentB64 = dataUrl.split(',')[1];
+          previewImg.src = dataUrl;
+          previewWrap.classList.add('visible');
+          previewName.textContent = file.name + ' · ' + formatBytes(file.size);
+          uploadPrompt.style.display = 'none';
+          dropZone.classList.add('has-image');
+          analyzeBtn.disabled = false;
+          hideResults();
+        };
+        reader.readAsDataURL(file);
+      }
     }
 
     previewRemove.addEventListener('click', (e) => {
