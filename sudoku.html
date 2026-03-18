@@ -119,6 +119,97 @@
     }
     .home-btn:active { transform: scale(0.95); }
 
+    /* Hamburger nav */
+    .hamburger {
+      position: fixed;
+      top: 3.8rem;
+      left: 1.1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: var(--toggle-bg);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+      z-index: 200;
+    }
+    .hamburger:hover { background: var(--toggle-hover); }
+    .nav-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 300;
+    }
+    .nav-overlay.open { display: block; }
+    .nav-drawer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 260px;
+      height: 100%;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+      transform: translateX(-100%);
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+      z-index: 400;
+      display: flex;
+      flex-direction: column;
+      padding: 1.25rem 1rem;
+    }
+    .nav-drawer.open { transform: translateX(0); }
+    .nav-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .nav-drawer-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .nav-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .nav-close:hover { background: var(--toggle-bg); }
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .nav-item {
+      display: block;
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover {
+      background: var(--toggle-bg);
+      color: var(--accent);
+    }
+
     /* Main card */
     .card {
       background: var(--surface);
@@ -299,6 +390,31 @@
     </svg>
   </a>
 
+  <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+  <div class="nav-overlay" id="nav-overlay"></div>
+  <nav class="nav-drawer" id="nav-drawer" aria-hidden="true">
+    <div class="nav-drawer-header">
+      <span class="nav-drawer-title">Pages</span>
+      <button class="nav-close" id="nav-close" aria-label="Close menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <ul class="nav-list">
+      <li><a class="nav-item" href="index.html">Home</a></li>
+      <li><a class="nav-item" href="sudoku.html">Sudoku</a></li>
+      <li><a class="nav-item" href="music.html">Mood Radio</a></li>
+      <li><a class="nav-item" href="image-analyzer.html">Image Analyzer</a></li>
+      <li><a class="nav-item" href="architecture.html">Architecture</a></li>
+    </ul>
+  </nav>
+
   <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
     <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
@@ -323,6 +439,17 @@
   </main>
 
   <script>
+    // ── Navigation ─────────────────────────────────────────────
+    const hamburgerBtn = document.getElementById('hamburger');
+    const navDrawer    = document.getElementById('nav-drawer');
+    const navOverlay   = document.getElementById('nav-overlay');
+    const navClose     = document.getElementById('nav-close');
+    function openNav() { navDrawer.classList.add('open'); navOverlay.classList.add('open'); hamburgerBtn.setAttribute('aria-expanded','true'); navDrawer.setAttribute('aria-hidden','false'); }
+    function closeNav() { navDrawer.classList.remove('open'); navOverlay.classList.remove('open'); hamburgerBtn.setAttribute('aria-expanded','false'); navDrawer.setAttribute('aria-hidden','true'); }
+    hamburgerBtn.addEventListener('click', openNav);
+    navClose.addEventListener('click', closeNav);
+    navOverlay.addEventListener('click', closeNav);
+
     // ── Dark mode ──────────────────────────────────────────────
     const root = document.documentElement;
     const toggleBtn = document.getElementById('theme-toggle');

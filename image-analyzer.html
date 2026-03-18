@@ -57,23 +57,6 @@
       width: 100%;
     }
 
-    /* ── Back link ── */
-    .back-link {
-      position: fixed;
-      top: 1.1rem;
-      left: 1.1rem;
-      font-size: 0.83rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      transition: color 0.15s;
-      z-index: 100;
-    }
-    .back-link:hover { color: var(--accent); }
-
     /* ── Theme toggle ── */
     .theme-toggle {
       position: fixed;
@@ -381,23 +364,308 @@
     .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
     .copy-btn.copied { color: var(--success); border-color: var(--success); }
 
+    /* ── Chat section ── */
+    .chat-section {
+      display: none;
+      margin-top: 1.5rem;
+      animation: fadeIn 0.3s ease;
+    }
+    .chat-section.visible { display: block; }
+
+    .chat-messages {
+      max-height: 400px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      padding: 0.5rem 0;
+    }
+
+    .chat-bubble {
+      max-width: 85%;
+      padding: 0.65rem 0.9rem;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-bubble.assistant {
+      align-self: flex-start;
+      background: var(--bg);
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .chat-bubble.typing {
+      align-self: flex-start;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      color: var(--muted);
+      font-style: italic;
+    }
+    .chat-bubble.system-msg {
+      align-self: center;
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      font-size: 0.82rem;
+      text-align: center;
+      max-width: 95%;
+      border-radius: 8px;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      align-items: flex-end;
+    }
+    .chat-input {
+      flex: 1;
+      padding: 0.6rem 0.85rem;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.88rem;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      transition: border-color 0.15s;
+      min-height: 40px;
+      max-height: 80px;
+    }
+    .chat-input:focus { border-color: var(--accent); }
+    .chat-input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .chat-send-btn {
+      padding: 0.6rem 1rem;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.88rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+    .chat-send-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .chat-send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .chat-counter {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+
+    .try-new-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 1rem;
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--accent);
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .try-new-btn.visible { display: flex; }
+    .try-new-btn:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* ── Navigation (hamburger + home) ── */
+    .home-btn {
+      position: fixed;
+      top: 1.1rem;
+      left: 1.1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: var(--text);
+      background: rgba(255,255,255,0.25);
+      border: 1.5px solid var(--border);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    }
+    [data-theme="dark"] .home-btn {
+      background: rgba(30,30,30,0.45);
+    }
+    .home-btn:hover {
+      transform: scale(1.07);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    }
+
+    .hamburger {
+      position: fixed;
+      top: 3.8rem;
+      left: 1.1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: var(--toggle-bg);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+      z-index: 200;
+    }
+    .hamburger:hover { background: var(--toggle-hover); }
+
+    .nav-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 300;
+    }
+    .nav-overlay.open { display: block; }
+
+    .nav-drawer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 260px;
+      height: 100%;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+      transform: translateX(-100%);
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+      z-index: 400;
+      display: flex;
+      flex-direction: column;
+      padding: 1.25rem 1rem;
+    }
+    .nav-drawer.open { transform: translateX(0); }
+
+    .nav-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .nav-drawer-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .nav-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .nav-close:hover { background: var(--toggle-bg); }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .nav-item {
+      display: block;
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover {
+      background: var(--toggle-bg);
+      color: var(--accent);
+    }
+
     /* ── Responsive ── */
     @media (max-width: 520px) {
       .card { padding: 1.75rem 1rem; }
       h1 { font-size: 1.25rem; }
       .subtitle { font-size: 0.75rem !important; word-break: break-word; }
       .drop-zone { padding: 1.75rem 1rem; }
-      .back-link { font-size: 0.78rem; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Back link -->
-  <a href="index.html" class="back-link">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    Back
+  <!-- Home button -->
+  <a class="home-btn" href="index.html" aria-label="Go to home">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
   </a>
+
+  <!-- Hamburger -->
+  <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Nav drawer -->
+  <div class="nav-overlay" id="nav-overlay"></div>
+  <nav class="nav-drawer" id="nav-drawer" aria-hidden="true">
+    <div class="nav-drawer-header">
+      <span class="nav-drawer-title">Pages</span>
+      <button class="nav-close" id="nav-close" aria-label="Close menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <ul class="nav-list">
+      <li><a class="nav-item" href="index.html">Home</a></li>
+      <li><a class="nav-item" href="sudoku.html">Sudoku</a></li>
+      <li><a class="nav-item" href="music.html">Mood Radio</a></li>
+      <li><a class="nav-item" href="image-analyzer.html">Image Analyzer</a></li>
+      <li><a class="nav-item" href="architecture.html">Architecture</a></li>
+    </ul>
+  </nav>
 
   <!-- Theme toggle -->
   <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
@@ -485,9 +753,41 @@
         Copy
       </button>
     </div>
+
+    <!-- Chat follow-up -->
+    <div class="chat-section" id="chat-section">
+      <div class="divider"></div>
+      <p class="results-label">Follow-up Questions</p>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row" id="chat-input-row">
+        <input type="text" class="chat-input" id="chat-input" placeholder="Ask a question about the image…" autocomplete="off" />
+        <button class="chat-send-btn" id="chat-send-btn">Send</button>
+      </div>
+      <p class="chat-counter" id="chat-counter"></p>
+    </div>
+
+    <!-- Try new image button -->
+    <button class="try-new-btn" id="try-new-btn">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Try a New Image
+    </button>
   </main>
 
   <script>
+    // ── Navigation ─────────────────────────────────────────────────
+    const hamburgerBtn = document.getElementById('hamburger');
+    const navDrawer    = document.getElementById('nav-drawer');
+    const navOverlay   = document.getElementById('nav-overlay');
+    const navClose     = document.getElementById('nav-close');
+
+    function openNav() { navDrawer.classList.add('open'); navOverlay.classList.add('open'); hamburgerBtn.setAttribute('aria-expanded','true'); navDrawer.setAttribute('aria-hidden','false'); }
+    function closeNav() { navDrawer.classList.remove('open'); navOverlay.classList.remove('open'); hamburgerBtn.setAttribute('aria-expanded','false'); navDrawer.setAttribute('aria-hidden','true'); }
+    hamburgerBtn.addEventListener('click', openNav);
+    navClose.addEventListener('click', closeNav);
+    navOverlay.addEventListener('click', closeNav);
+
     // ── Theme ──────────────────────────────────────────────────────
     const root = document.documentElement;
     const toggleBtn = document.getElementById('theme-toggle');
@@ -695,7 +995,34 @@
       }
     }
 
+    // ── Chat state ───────────────────────────────────────────────
+    const chatSection  = document.getElementById('chat-section');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput    = document.getElementById('chat-input');
+    const chatSendBtn  = document.getElementById('chat-send-btn');
+    const chatCounter  = document.getElementById('chat-counter');
+    const tryNewBtn    = document.getElementById('try-new-btn');
+
+    let chatHistory    = [];   // {role, content} pairs
+    let questionCount  = 0;
+    const MAX_QUESTIONS = 10;
+    let initialAnalysis = '';
+    let imageBlocked = false;
+
     function showResult(text) {
+      // Check for content moderation block
+      if (text.startsWith('[BLOCKED]')) {
+        const msg = text.replace('[BLOCKED]', '').trim();
+        resultContent.innerHTML = `<div class="result-error">🚫 ${escHtml(msg)}</div>`;
+        tagsRow.innerHTML = '';
+        resultsSection.classList.add('visible');
+        imageBlocked = true;
+        chatSection.classList.remove('visible');
+        return;
+      }
+
+      imageBlocked = false;
+
       // Parse **bold title** if present (first line)
       const lines = text.split('\n');
       const firstLine = lines[0].replace(/^\*\*|\*\*$/g, '').trim();
@@ -708,6 +1035,22 @@
       tagsRow.innerHTML = words.map(w => `<span class="tag">${escHtml(w.replace(/[^a-zA-Z0-9\s]/g, ''))}</span>`).join('');
 
       resultsSection.classList.add('visible');
+
+      // Initialize chat
+      initialAnalysis = text;
+      chatHistory = [
+        { role: 'user', content: 'Analyze this image in detail.' },
+        { role: 'assistant', content: text }
+      ];
+      questionCount = 0;
+      chatMessages.innerHTML = '';
+      chatInput.disabled = false;
+      chatSendBtn.disabled = false;
+      chatInput.value = '';
+      chatCounter.textContent = '';
+      tryNewBtn.classList.remove('visible');
+      chatSection.classList.add('visible');
+
       resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
@@ -721,7 +1064,108 @@
       resultsSection.classList.remove('visible');
       resultContent.innerHTML = '';
       tagsRow.innerHTML = '';
+      chatSection.classList.remove('visible');
+      chatMessages.innerHTML = '';
+      chatHistory = [];
+      questionCount = 0;
+      imageBlocked = false;
+      tryNewBtn.classList.remove('visible');
     }
+
+    // ── Chat logic ────────────────────────────────────────────────
+    function updateCounter() {
+      chatCounter.textContent = `Question ${questionCount} of ${MAX_QUESTIONS}`;
+    }
+
+    function addBubble(role, text) {
+      const div = document.createElement('div');
+      div.className = `chat-bubble ${role}`;
+      div.textContent = text;
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return div;
+    }
+
+    async function sendChat() {
+      const prompt = chatInput.value.trim();
+      if (!prompt || !currentB64 || questionCount >= MAX_QUESTIONS) return;
+
+      questionCount++;
+      updateCounter();
+
+      // Add user bubble
+      addBubble('user', prompt);
+      chatInput.value = '';
+      chatInput.disabled = true;
+      chatSendBtn.disabled = true;
+
+      // Typing indicator
+      const typing = addBubble('typing', 'Thinking…');
+
+      try {
+        const res = await fetch('https://claudecodeproject.onrender.com/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image: currentB64,
+            mediaType: currentMediaType || 'image/jpeg',
+            messages: chatHistory,
+            prompt: prompt
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Chat failed');
+
+        // Remove typing indicator
+        typing.remove();
+
+        let answer = data.result;
+
+        // Add to history
+        chatHistory.push({ role: 'user', content: prompt });
+        chatHistory.push({ role: 'assistant', content: answer });
+
+        // Question 9: append farewell
+        if (questionCount === MAX_QUESTIONS - 1) {
+          answer += '\n\nThis has been so much fun... I\'ll take one more question, and then I have to run! [hey that rhymed :)]';
+        }
+
+        addBubble('assistant', answer);
+
+        // Question 10: disable input, show try-new button
+        if (questionCount >= MAX_QUESTIONS) {
+          chatInput.disabled = true;
+          chatSendBtn.disabled = true;
+          chatInput.placeholder = 'Chat limit reached';
+          tryNewBtn.classList.add('visible');
+          tryNewBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          chatInput.disabled = false;
+          chatSendBtn.disabled = false;
+          chatInput.focus();
+        }
+      } catch (err) {
+        typing.remove();
+        addBubble('assistant', '⚠️ ' + err.message);
+        chatInput.disabled = false;
+        chatSendBtn.disabled = false;
+      }
+    }
+
+    chatSendBtn.addEventListener('click', sendChat);
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+    });
+
+    tryNewBtn.addEventListener('click', () => {
+      resetDropZone();
+      chatInput.placeholder = 'Ask a question about the image…';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
 
     function escHtml(s) {
       return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
