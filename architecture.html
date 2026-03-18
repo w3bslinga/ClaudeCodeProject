@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture View — alwinthomas.click</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2230;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-orange: #f0883e;
+      --accent-purple: #bc8cff;
+      --accent-yellow: #e3b341;
+      --accent-red: #f85149;
+      --accent-teal: #39d3c3;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 24px 64px;
+    }
+
+    /* ─── Header ───────────────────────────────────────────────── */
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .header h1 {
+      font-size: 1.9rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+    .header h1 span { color: var(--accent-blue); }
+    .header p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .badge {
+      display: inline-block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    /* ─── Layout ────────────────────────────────────────────────── */
+    .diagram {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* ─── Zone Wrapper ──────────────────────────────────────────── */
+    .zone {
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      padding: 20px 24px 24px;
+      position: relative;
+    }
+    .zone-label {
+      position: absolute;
+      top: -11px;
+      left: 20px;
+      background: var(--bg);
+      padding: 0 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--muted);
+    }
+
+    /* Tier colors */
+    .zone-client  { border-color: #2d333b; }
+    .zone-edge    { border-color: #264f78; }
+    .zone-frontend{ border-color: #1f4a2e; }
+    .zone-backend { border-color: #4a2e1f; }
+    .zone-ai      { border-color: #3b1f4a; }
+    .zone-dev     { border-color: #4a3b1f; }
+
+    .zone-client  .zone-label { color: #8b949e; }
+    .zone-edge    .zone-label { color: #58a6ff; }
+    .zone-frontend .zone-label { color: #3fb950; }
+    .zone-backend .zone-label { color: #f0883e; }
+    .zone-ai      .zone-label { color: #bc8cff; }
+    .zone-dev     .zone-label { color: #e3b341; }
+
+    /* ─── Connector arrows ──────────────────────────────────────── */
+    .connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 4px 0;
+      gap: 0;
+      position: relative;
+    }
+    .connector .line {
+      width: 2px;
+      height: 24px;
+      background: var(--border);
+    }
+    .connector .line.dashed {
+      background: repeating-linear-gradient(
+        to bottom,
+        var(--border) 0px, var(--border) 4px,
+        transparent 4px, transparent 8px
+      );
+    }
+    .connector svg.arrow {
+      fill: var(--border);
+      display: block;
+    }
+    .connector .label {
+      font-size: 0.68rem;
+      color: var(--muted);
+      background: var(--bg);
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+      margin: 3px 0;
+    }
+    .connector .label.https  { border-color: #264f78; color: var(--accent-blue); }
+    .connector .label.api    { border-color: #3b1f4a; color: var(--accent-purple); }
+    .connector .label.deploy { border-color: #4a3b1f; color: var(--accent-yellow); }
+
+    /* ─── Node grid ─────────────────────────────────────────────── */
+    .nodes {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    /* ─── Node card ─────────────────────────────────────────────── */
+    .node {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      min-width: 160px;
+      flex: 1;
+      max-width: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .node-icon {
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+    .node-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .node-sub {
+      font-size: 0.71rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .node-tag {
+      display: inline-block;
+      font-size: 0.62rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      border-radius: 4px;
+      padding: 2px 6px;
+      margin-top: 2px;
+      width: fit-content;
+    }
+    .tag-blue    { background: rgba(88,166,255,.15); color: var(--accent-blue);   border: 1px solid rgba(88,166,255,.3); }
+    .tag-green   { background: rgba(63,185,80,.15);  color: var(--accent-green);  border: 1px solid rgba(63,185,80,.3); }
+    .tag-orange  { background: rgba(240,136,62,.15); color: var(--accent-orange); border: 1px solid rgba(240,136,62,.3); }
+    .tag-purple  { background: rgba(188,140,255,.15);color: var(--accent-purple); border: 1px solid rgba(188,140,255,.3); }
+    .tag-yellow  { background: rgba(227,179,65,.15); color: var(--accent-yellow); border: 1px solid rgba(227,179,65,.3); }
+    .tag-teal    { background: rgba(57,211,195,.15); color: var(--accent-teal);   border: 1px solid rgba(57,211,195,.3); }
+    .tag-red     { background: rgba(248,81,73,.15);  color: var(--accent-red);    border: 1px solid rgba(248,81,73,.3); }
+
+    /* ─── Horizontal flow inside a zone ────────────────────────── */
+    .hflow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .hconnector {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 0 4px;
+    }
+    .hconnector .hline {
+      height: 2px;
+      width: 28px;
+      background: var(--border);
+    }
+    .hconnector .hlabel {
+      font-size: 0.62rem;
+      color: var(--muted);
+      white-space: nowrap;
+      padding: 1px 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    /* ─── Info strip ────────────────────────────────────────────── */
+    .info-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .info-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      flex: 1;
+      min-width: 180px;
+    }
+    .info-chip .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-green  { background: var(--accent-green); }
+    .dot-orange { background: var(--accent-orange); }
+    .dot-purple { background: var(--accent-purple); }
+    .dot-blue   { background: var(--accent-blue); }
+    .dot-yellow { background: var(--accent-yellow); }
+    .dot-teal   { background: var(--accent-teal); }
+
+    /* ─── Legend ────────────────────────────────────────────────── */
+    .legend {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 36px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .legend-line {
+      width: 28px;
+      height: 2px;
+    }
+
+    /* ─── Section title ─────────────────────────────────────────── */
+    .section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* ─── MCP detail box ─────────────────────────────────────────── */
+    .mcp-box {
+      background: rgba(188,140,255,.06);
+      border: 1px dashed rgba(188,140,255,.35);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .mcp-box strong { color: var(--accent-purple); }
+    .mcp-box ul { padding-left: 16px; margin-top: 4px; }
+    .mcp-box li { margin-bottom: 2px; }
+
+    /* ─── Split two-col ─────────────────────────────────────────── */
+    .split {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .split-left  { flex: 1; min-width: 220px; }
+    .split-right { flex: 1; min-width: 220px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Architecture View — <span>alwinthomas.click</span></h1>
+  <p>Full-stack portfolio site: static frontend + AI-powered backend</p>
+  <div class="badge">Claude Code Project &nbsp;·&nbsp; March 2026</div>
+</div>
+
+<div class="diagram">
+
+  <!-- ══════════════════════════════════════════
+       TIER 1: CLIENT
+  ══════════════════════════════════════════ -->
+  <div class="zone zone-client">
+    <span class="zone-label">Tier 1 — User / Client</span>
+    <div class="nodes">
+      <div class="node">
+        <div class="node-icon">🌐</div>
+        <div class="node-title">Web Browser</div>
+        <div class="node-sub">Desktop &amp; Mobile<br>HTTPS requests, File API, Canvas API, Fetch API</div>
+        <span class="node-tag tag-blue">End User</span>
+      </div>
+      <div class="node">
+        <div class="node-icon">📱</div>
+        <div class="node-title">Mobile Browser</div>
+        <div class="node-sub">Responsive layout (≤520 px breakpoint), touch-optimised, viewport meta</div>
+        <span class="node-tag tag-blue">End User</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- connector -->
+  <div class="connector">
+    <div class="line"></div>
+    <span class="label https">HTTPS &nbsp;www.alwinthomas.click</span>
+    <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TIER 2: DNS / EDGE
+  ══════════════════════════════════════════ -->
+  <div class="zone zone-edge">
+    <span class="zone-label">Tier 2 — DNS &amp; Edge / CDN</span>
+    <div class="split">
+      <div class="split-left">
+        <div class="section-title">Domain &amp; DNS</div>
+        <div class="nodes" style="justify-content:flex-start">
+          <div class="node">
+            <div class="node-icon">🔖</div>
+            <div class="node-title">alwinthomas.click</div>
+            <div class="node-sub">Custom domain registered externally. CNAME file in repo:<br><code style="font-size:0.68rem;color:var(--accent-teal)">www.alwinthomas.click</code></div>
+            <span class="node-tag tag-teal">DNS · CNAME</span>
+          </div>
+          <div class="node">
+            <div class="node-icon">🔒</div>
+            <div class="node-title">GitHub Pages CDN</div>
+            <div class="node-sub">Auto-HTTPS (TLS provisioned by GitHub). Global CDN edge delivery. Resolves CNAME → Pages IP</div>
+            <span class="node-tag tag-blue">CDN · HTTPS</span>
+          </div>
+        </div>
+      </div>
+      <div class="split-right">
+        <div class="section-title">Traffic routing</div>
+        <div class="mcp-box" style="border-color:rgba(88,166,255,.3);background:rgba(88,166,255,.05)">
+          <strong style="color:var(--accent-blue)">Flow:</strong><br>
+          Browser DNS lookup → <strong style="color:var(--accent-teal)">www.alwinthomas.click</strong><br>
+          → CNAME resolves to <strong style="color:var(--accent-blue)">GitHub Pages</strong> CDN nodes<br>
+          → TLS terminated at edge<br>
+          → Static assets served from CDN cache<br>
+          → Dynamic AI calls bypass CDN → Render
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- connector -->
+  <div class="connector">
+    <div class="line"></div>
+    <span class="label https">Serves static files from repo branch: main</span>
+    <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TIER 3: FRONTEND — GitHub Pages
+  ══════════════════════════════════════════ -->
+  <div class="zone zone-frontend">
+    <span class="zone-label">Tier 3 — Frontend · GitHub Pages (Static Hosting)</span>
+    <div class="nodes">
+      <div class="node">
+        <div class="node-icon">🏠</div>
+        <div class="node-title">index.html</div>
+        <div class="node-sub">Portfolio homepage. Bio, skills, projects. Formspree contact form (POST /f/mvzbjenk)</div>
+        <span class="node-tag tag-green">Static Page</span>
+      </div>
+      <div class="node">
+        <div class="node-icon">🖼️</div>
+        <div class="node-title">image-analyzer.html</div>
+        <div class="node-sub">AI image analysis tool. File upload, drag-drop, canvas resize. Calls Render backend /analyze</div>
+        <span class="node-tag tag-orange">AI Feature</span>
+      </div>
+      <div class="node">
+        <div class="node-icon">🎵</div>
+        <div class="node-title">music.html</div>
+        <div class="node-sub">Mood-based music streaming app. Embedded player, playlist logic</div>
+        <span class="node-tag tag-green">Static Page</span>
+      </div>
+      <div class="node">
+        <div class="node-icon">🧩</div>
+        <div class="node-title">sudoku.html</div>
+        <div class="node-sub">Interactive Sudoku game. Pure JS client-side logic, no backend dependency</div>
+        <span class="node-tag tag-green">Static Page</span>
+      </div>
+      <div class="node">
+        <div class="node-icon">🎨</div>
+        <div class="node-title">style.css</div>
+        <div class="node-sub">Shared design system. CSS variables, dark/light theme toggle, responsive breakpoints</div>
+        <span class="node-tag tag-green">Shared Asset</span>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-chip"><div class="dot dot-green"></div> Repo: w3bslinga/ClaudeCodeProject · branch: main</div>
+      <div class="info-chip"><div class="dot dot-blue"></div> Theme: CSS variables + data-theme, LocalStorage persistence</div>
+      <div class="info-chip"><div class="dot dot-orange"></div> Image resize: Canvas API client-side before upload (≤5 MB base64)</div>
+    </div>
+  </div>
+
+  <!-- two-way connectors row -->
+  <div style="display:flex;justify-content:center;align-items:flex-start;gap:80px">
+    <!-- left: Formspree -->
+    <div class="connector" style="flex:1;max-width:220px">
+      <div class="line dashed"></div>
+      <span class="label https">POST contact form</span>
+      <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
+      <div style="font-size:0.68rem;color:var(--muted);margin-top:4px;text-align:center">Formspree<br><code style="font-size:0.62rem;color:var(--accent-teal)">formspree.io/f/mvzbjenk</code></div>
+    </div>
+    <!-- right: Render backend -->
+    <div class="connector" style="flex:1;max-width:220px">
+      <div class="line"></div>
+      <span class="label https">POST /analyze · HTTPS · CORS</span>
+      <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TIER 4: BACKEND — Render
+  ══════════════════════════════════════════ -->
+  <div class="zone zone-backend" style="margin-left:auto;width:60%;min-width:320px">
+    <span class="zone-label">Tier 4 — Backend · Render.com (Python Server)</span>
+    <div class="nodes">
+      <div class="node" style="max-width:100%">
+        <div class="node-icon">🐍</div>
+        <div class="node-title">server.py — Python HTTP Proxy</div>
+        <div class="node-sub">
+          Endpoint: <code style="color:var(--accent-teal)">claudecodeproject.onrender.com</code><br>
+          Port: <strong>8788</strong>&nbsp;·&nbsp;60s timeout<br><br>
+          <strong>Routes:</strong><br>
+          &nbsp;POST <code>/analyze</code> → validate → forward to Claude API<br>
+          &nbsp;GET  <code>/*</code> → serve static files (dev)<br><br>
+          <strong>Responsibilities:</strong> CORS headers, API key guard (env-only), input validation, image media-type check, auto-resize fallback, JSON response
+        </div>
+        <span class="node-tag tag-orange">API Proxy · Python</span>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-chip"><div class="dot dot-orange"></div> CORS: Allow-Origin *, Methods: POST OPTIONS</div>
+      <div class="info-chip"><div class="dot dot-orange"></div> API key read from env only — never from request</div>
+      <div class="info-chip"><div class="dot dot-orange"></div> Accepted MIME: jpeg, png, gif, webp · limit 5 MB base64</div>
+    </div>
+  </div>
+
+  <!-- connector to Anthropic -->
+  <div class="connector" style="align-self:flex-end;width:60%;min-width:320px">
+    <div class="line"></div>
+    <span class="label api">POST /v1/messages · Bearer ANTHROPIC_API_KEY</span>
+    <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TIER 5: AI — Anthropic Claude API
+  ══════════════════════════════════════════ -->
+  <div class="zone zone-ai" style="margin-left:auto;width:60%;min-width:320px">
+    <span class="zone-label">Tier 5 — AI Service · Anthropic Claude API</span>
+    <div class="nodes">
+      <div class="node" style="max-width:100%">
+        <div class="node-icon">🤖</div>
+        <div class="node-title">Claude Sonnet 4.5</div>
+        <div class="node-sub">
+          Model: <code style="color:var(--accent-purple)">claude-sonnet-4-5</code><br>
+          Endpoint: <code style="color:var(--accent-purple)">api.anthropic.com/v1/messages</code><br>
+          Max tokens: <strong>1,024</strong><br><br>
+          Input: base64-encoded image + user prompt<br>
+          Output: natural-language image analysis
+        </div>
+        <span class="node-tag tag-purple">Vision · LLM</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TIER 6: DEVELOPER WORKFLOW — MCP
+  ══════════════════════════════════════════ -->
+  <div style="height:40px"></div>
+  <div class="zone zone-dev">
+    <span class="zone-label">Developer Workflow — Claude Code &amp; MCP Integration</span>
+    <div class="split">
+
+      <div class="split-left">
+        <div class="section-title">Claude Code tooling (.claude/)</div>
+        <div class="nodes" style="justify-content:flex-start">
+          <div class="node">
+            <div class="node-icon">🚀</div>
+            <div class="node-title">launch.json</div>
+            <div class="node-sub">
+              <strong>personal-site:</strong> python3 -m http.server 3000<br>
+              <strong>image-analyzer:</strong> python3 server.py :8788<br>
+              Claude Code auto-starts/stops these dev servers
+            </div>
+            <span class="node-tag tag-yellow">Dev Server Config</span>
+          </div>
+          <div class="node">
+            <div class="node-icon">🔐</div>
+            <div class="node-title">settings.local.json</div>
+            <div class="node-sub">
+              Allowlist of permitted shell commands &amp; URLs for Claude automation: git, GitHub API, npm, fetch, ping
+            </div>
+            <span class="node-tag tag-yellow">Permissions</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="split-right">
+        <div class="section-title">MCP — Model Context Protocol usage</div>
+        <div class="mcp-box">
+          <strong>How MCP is used in this project:</strong>
+          <ul>
+            <li><strong>Claude Preview MCP</strong> — <code>preview_start / preview_screenshot / preview_snapshot</code> tools run the dev servers, navigate the live site, and capture visual proof of changes</li>
+            <li><strong>Claude in Chrome MCP</strong> — browser automation, screenshot verification, DOM inspection during development</li>
+            <li><strong>Scheduled Tasks MCP</strong> — ad-hoc task scheduling wired into Claude Code sessions</li>
+            <li><strong>MCP Registry</strong> — connector discovery (search / suggest) for third-party integrations</li>
+            <li><strong>settings.local.json allowlist</strong> — scopes which external domains / shell commands Claude Code agents may call (GitHub, Render health checks, CDN pings)</li>
+            <li><strong>launch.json</strong> — MCP-readable server config; Claude Code reads this to know how to spin up local dev environments without manual CLI</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Git / CI row -->
+    <div style="margin-top:20px">
+      <div class="section-title">Source Control &amp; Deployment Pipeline</div>
+      <div class="hflow">
+        <div class="node" style="max-width:160px">
+          <div class="node-icon">💻</div>
+          <div class="node-title">Local Dev</div>
+          <div class="node-sub">Claude Code CLI, preview_start servers, MCP tools</div>
+          <span class="node-tag tag-yellow">Dev</span>
+        </div>
+        <div class="hconnector">
+          <div class="hline"></div>
+          <span class="hlabel">git push</span>
+          <div class="hline"></div>
+          <svg fill="var(--border)" width="8" height="6" viewBox="0 0 8 6"><polygon points="8,3 0,0 0,6"/></svg>
+        </div>
+        <div class="node" style="max-width:160px">
+          <div class="node-icon">🐙</div>
+          <div class="node-title">GitHub</div>
+          <div class="node-sub">Repo: ClaudeCodeProject branch: main · git log + blame</div>
+          <span class="node-tag tag-blue">VCS</span>
+        </div>
+        <div class="hconnector">
+          <div class="hline"></div>
+          <span class="hlabel">auto-deploy</span>
+          <div class="hline"></div>
+          <svg fill="var(--border)" width="8" height="6" viewBox="0 0 8 6"><polygon points="8,3 0,0 0,6"/></svg>
+        </div>
+        <div class="node" style="max-width:160px">
+          <div class="node-icon">📄</div>
+          <div class="node-title">GitHub Pages</div>
+          <div class="node-sub">Static site live at www.alwinthomas.click on push to main</div>
+          <span class="node-tag tag-green">Hosting</span>
+        </div>
+        <div class="hconnector">
+          <div class="hline"></div>
+          <span class="hlabel">manual deploy</span>
+          <div class="hline"></div>
+          <svg fill="var(--border)" width="8" height="6" viewBox="0 0 8 6"><polygon points="8,3 0,0 0,6"/></svg>
+        </div>
+        <div class="node" style="max-width:160px">
+          <div class="node-icon">⚙️</div>
+          <div class="node-title">Render.com</div>
+          <div class="node-sub">Python server.py · Web Service · claudecodeproject.onrender.com</div>
+          <span class="node-tag tag-orange">Backend Hosting</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /diagram -->
+
+<!-- ══════════════════════════════════════════
+     LEGEND
+══════════════════════════════════════════ -->
+<div style="max-width:1100px;margin:0 auto">
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-line" style="background:var(--border)"></div>
+      <span>HTTPS request</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background:repeating-linear-gradient(to right,var(--border) 0,var(--border) 4px,transparent 4px,transparent 8px)"></div>
+      <span>Optional / 3rd-party call</span>
+    </div>
+    <div class="legend-item"><span class="node-tag tag-green" style="margin:0">Static Page</span><span style="margin-left:6px">GitHub Pages hosted</span></div>
+    <div class="legend-item"><span class="node-tag tag-orange" style="margin:0">Python Server</span><span style="margin-left:6px">Render.com hosted</span></div>
+    <div class="legend-item"><span class="node-tag tag-purple" style="margin:0">Claude API</span><span style="margin-left:6px">Anthropic cloud</span></div>
+    <div class="legend-item"><span class="node-tag tag-yellow" style="margin:0">MCP / Dev</span><span style="margin-left:6px">Claude Code tooling</span></div>
+  </div>
+</div>
+
+</body>
+</html>
