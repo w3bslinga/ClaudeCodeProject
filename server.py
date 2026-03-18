@@ -27,7 +27,7 @@ def load_dotenv(path=".env"):
 
 PORT = 8788
 CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
-CLAUDE_MODEL = "claude-sonnet-4-5"
+CLAUDE_MODEL = "claude-opus-4-6"
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
