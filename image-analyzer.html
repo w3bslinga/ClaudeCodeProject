@@ -127,6 +127,21 @@
       font-size: 0.9rem;
       color: var(--muted);
     }
+    @keyframes rainbowShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .rainbow-text {
+      background: linear-gradient(90deg, #f97316, #eab308, #22c55e, #3b82f6, #a855f7, #ec4899, #f97316);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      animation: rainbowShift 4s ease infinite;
+      font-weight: 500;
+    }
 
     /* ── Drop zone ── */
     .drop-zone {
@@ -690,7 +705,8 @@
         </svg>
       </div>
       <h1>Image Analyzer</h1>
-      <p class="subtitle" style="font-size:0.78rem; margin-top:0.3rem; color: var(--muted);">Powered by Claude Opus 4.6 · Max image size: 3.75 MB · Larger images auto-resized</p>
+      <p style="font-style:italic; font-size:0.85rem; margin-top:0.25rem;"><span class="rainbow-text">Powered by Claude Opus 4.6</span></p>
+      <p class="subtitle" style="font-size:0.78rem; margin-top:0.3rem; color: var(--muted);">Max image size: 3.75 MB · Larger images auto-resized</p>
     </div>
 
     <!-- Drop zone -->
