@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Research Center — Alwin Thomas</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f9f8;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #0a66c2;
+      --accent-hover: #0854a5;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.07);
+      --toggle-bg: #e5e7eb;
+      --toggle-hover: #d1d5db;
+      --drop-bg: #f0f6ff;
+      --drop-border: #93c5fd;
+      --success: #16a34a;
+      --error: #dc2626;
+      --tag-bg: #eff6ff;
+      --tag-text: #1d4ed8;
+    }
+    [data-theme="dark"] {
+      --bg: #111111;
+      --surface: #1c1c1c;
+      --text: #f0ede8;
+      --muted: #9ca3af;
+      --border: #2e2e2e;
+      --shadow: 0 4px 24px rgba(0,0,0,0.45);
+      --toggle-bg: #2e2e2e;
+      --toggle-hover: #3a3a3a;
+      --drop-bg: #1a2233;
+      --drop-border: #3b82f6;
+      --tag-bg: #1e3a5f;
+      --tag-text: #93c5fd;
+    }
+
+    html { transition: background 0.2s, color 0.2s; overflow-x: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 4rem;
+      line-height: 1.6;
+      transition: background 0.2s, color 0.2s;
+      overflow-x: hidden;
+      width: 100%;
+    }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      position: fixed;
+      top: 1.1rem;
+      right: 1.1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: var(--toggle-bg);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, transform 0.1s;
+      z-index: 100;
+    }
+    .theme-toggle:hover { background: var(--toggle-hover); }
+    .theme-toggle:active { transform: scale(0.92); }
+    .theme-toggle .icon-sun,
+    .theme-toggle .icon-moon {
+      position: absolute;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .theme-toggle .icon-moon { opacity: 0; transform: rotate(-30deg) scale(0.8); }
+    [data-theme="dark"] .theme-toggle .icon-sun { opacity: 0; transform: rotate(30deg) scale(0.8); }
+    [data-theme="dark"] .theme-toggle .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2.5rem 2rem;
+      max-width: 720px;
+      width: 100%;
+      margin-top: 1rem;
+    }
+
+    .card-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .icon-wrap {
+      width: 56px;
+      height: 56px;
+      background: var(--drop-bg);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .icon-wrap svg { color: var(--accent); }
+
+    h1 {
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.3rem;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    @keyframes rainbowShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .rainbow-text {
+      background: linear-gradient(90deg, #f97316, #eab308, #22c55e, #3b82f6, #a855f7, #ec4899, #f97316);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      animation: rainbowShift 4s ease infinite;
+      font-weight: 500;
+    }
+
+    /* ── Search section (sticky) ── */
+    .search-sticky {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--surface);
+      padding: 1rem 0 0.75rem;
+      margin: -1rem 0 0;
+    }
+    .search-section {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .search-input {
+      flex: 1;
+      padding: 0.7rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--muted); }
+
+    .search-btn {
+      padding: 0.7rem 1.4rem;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      white-space: nowrap;
+    }
+    .search-btn:hover { background: var(--accent-hover); }
+    .search-btn:active { transform: scale(0.97); }
+    .search-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ── Loading ── */
+    .loading-section {
+      text-align: center;
+      padding: 2rem 0;
+    }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .loading-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.25rem;
+    }
+
+    /* ── Error ── */
+    .error-message {
+      color: var(--error);
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 1rem;
+    }
+
+    /* ── Results ── */
+    .results-header {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+    }
+    .results-header span {
+      color: var(--accent);
+    }
+
+    .result-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      transition: box-shadow 0.2s;
+    }
+    .result-card:hover {
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    [data-theme="dark"] .result-card:hover {
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+
+    .video-header {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .video-thumb-wrap {
+      position: relative;
+      flex-shrink: 0;
+      cursor: pointer;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .video-thumb-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.25);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .video-thumb-wrap:hover::after { opacity: 1; }
+    .play-icon {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 36px; height: 36px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .video-thumb-wrap:hover .play-icon { opacity: 1; }
+    .play-icon svg { margin-left: 2px; }
+    .video-thumb {
+      width: 160px;
+      height: 90px;
+      object-fit: cover;
+      display: block;
+    }
+    .video-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+    }
+    .video-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      text-decoration: none;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .video-title:hover { color: var(--accent); }
+    .video-meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    .bullet-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .bullet-list li {
+      position: relative;
+      padding-left: 1.25rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: var(--text);
+    }
+    .bullet-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.55em;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .no-transcript {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 2rem 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    /* ── Show more / Super Summary buttons ── */
+    .results-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .show-more-btn {
+      padding: 0.6rem 1.2rem;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .show-more-btn:hover { background: var(--toggle-bg); border-color: var(--muted); }
+
+    /* ── Floating Fireball Button ── */
+    .fireball-btn {
+      position: fixed;
+      right: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: none;
+      background: radial-gradient(circle at 40% 60%, #ff4500, #ff8c00);
+      color: #fff;
+      cursor: pointer;
+      z-index: 500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px rgba(255,69,0,0.5), 0 0 40px rgba(255,140,0,0.3);
+      animation: fireballPulse 1.8s ease-in-out infinite;
+      transition: transform 0.2s, box-shadow 0.2s;
+      overflow: visible;
+    }
+    .fireball-btn.visible { display: flex; }
+    .fireball-btn:hover {
+      transform: translateY(-50%) scale(1.12);
+      box-shadow: 0 0 30px rgba(255,69,0,0.7), 0 0 60px rgba(255,140,0,0.5);
+    }
+    .fireball-btn:active { transform: translateY(-50%) scale(1.05); }
+    @keyframes fireballPulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(255,69,0,0.5), 0 0 40px rgba(255,140,0,0.3); }
+      50% { box-shadow: 0 0 30px rgba(255,69,0,0.7), 0 0 60px rgba(255,140,0,0.5), 0 0 80px rgba(255,69,0,0.2); }
+    }
+    .fireball-btn .flame-icon { font-size: 1.6rem; z-index: 1; }
+    .fireball-btn .tooltip {
+      position: absolute;
+      right: calc(100% + 12px);
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--surface);
+      color: var(--text);
+      padding: 0.4rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      white-space: nowrap;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .fireball-btn:hover .tooltip { opacity: 1; }
+    /* Flame particles */
+    .fireball-btn::before,
+    .fireball-btn::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,140,0,0.6);
+      animation: flameParticle 1.2s ease-out infinite;
+    }
+    .fireball-btn::before {
+      width: 10px; height: 10px;
+      top: -4px; left: 10px;
+      animation-delay: 0s;
+    }
+    .fireball-btn::after {
+      width: 8px; height: 8px;
+      top: -2px; right: 12px;
+      animation-delay: 0.4s;
+      background: rgba(255,69,0,0.5);
+    }
+    @keyframes flameParticle {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-20px) scale(0.3); }
+    }
+
+    /* ── Super Summary modal ── */
+    .super-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .super-modal-overlay.open { display: flex; }
+    .super-modal {
+      position: relative;
+      width: 90vw;
+      max-width: 640px;
+      max-height: 80vh;
+      background: var(--surface);
+      border-radius: 16px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+      overflow-y: auto;
+      padding: 2rem;
+    }
+    .super-modal-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .super-modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--toggle-bg);
+      color: var(--text);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .super-modal-close:hover { background: var(--toggle-hover); }
+    .super-modal-content {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+    .super-modal-loading {
+      text-align: center;
+      padding: 2rem 0;
+    }
+
+    /* ── Video modal ── */
+    .video-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .video-modal-overlay.open { display: flex; }
+    .video-modal {
+      position: relative;
+      width: 90vw;
+      max-width: 800px;
+      aspect-ratio: 16/9;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+    .video-modal iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .video-modal-close {
+      position: absolute;
+      top: -40px;
+      right: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .video-modal-close:hover { background: rgba(255,255,255,0.35); }
+
+    /* ── Home button ── */
+    .home-btn {
+      position: fixed;
+      top: 1.1rem;
+      left: 4rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--toggle-bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      transition: background 0.15s;
+      z-index: 100;
+    }
+    .home-btn:hover { background: var(--toggle-hover); }
+
+    /* ── Hamburger / Nav ── */
+    .hamburger {
+      position: fixed;
+      top: 1.1rem;
+      left: 1.1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: var(--toggle-bg);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+      z-index: 200;
+    }
+    .hamburger:hover { background: var(--toggle-hover); }
+
+    .nav-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 300;
+    }
+    .nav-overlay.open { display: block; }
+
+    .nav-drawer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 260px;
+      height: 100%;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+      transform: translateX(-100%);
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+      z-index: 400;
+      display: flex;
+      flex-direction: column;
+      padding: 1.25rem 1rem;
+    }
+    .nav-drawer.open { transform: translateX(0); }
+
+    .nav-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .nav-drawer-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .nav-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .nav-close:hover { background: var(--toggle-bg); }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .nav-item {
+      display: block;
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover {
+      background: var(--toggle-bg);
+      color: var(--accent);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 520px) {
+      .card { padding: 1.75rem 1rem; }
+      h1 { font-size: 1.25rem; }
+      .search-section { flex-direction: column; }
+      .video-header { flex-direction: column; }
+      .video-thumb { width: 100%; height: auto; }
+      .fireball-btn {
+        width: 50px;
+        height: 50px;
+        right: 1rem;
+        top: auto;
+        bottom: 1.5rem;
+        transform: none;
+      }
+      .fireball-btn:hover { transform: scale(1.12); }
+      .fireball-btn:active { transform: scale(1.05); }
+      .fireball-btn .tooltip { display: none; }
+    }
+
+    /* ── Star cursor + particle trail ── */
+    * { cursor: none !important; }
+    #star-cursor {
+      position: fixed; width: 22px; height: 22px;
+      pointer-events: none; z-index: 99999;
+      transform: translate(-50%, -50%); will-change: left, top;
+    }
+    #star-cursor svg { width: 100%; height: 100%; filter: drop-shadow(0 0 4px rgba(99,102,241,0.6)); }
+    [data-theme="dark"] #star-cursor svg { filter: drop-shadow(0 0 5px rgba(129,140,248,0.9)); }
+    @keyframes starSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    #star-cursor.spinning { animation: starSpin 0.6s linear infinite; }
+    .trail-particle {
+      position: fixed; border-radius: 50%; pointer-events: none; z-index: 9998;
+      animation: trailFade 0.5s ease-out forwards;
+    }
+    @keyframes trailFade {
+      0%   { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0;    transform: translate(-50%, calc(-50% - 18px)) scale(0.2); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Home button -->
+  <a class="home-btn" href="index.html" aria-label="Go to home">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+  </a>
+
+  <!-- Hamburger -->
+  <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Nav drawer -->
+  <div class="nav-overlay" id="nav-overlay"></div>
+  <nav class="nav-drawer" id="nav-drawer" aria-hidden="true">
+    <div class="nav-drawer-header">
+      <span class="nav-drawer-title">Pages</span>
+      <button class="nav-close" id="nav-close" aria-label="Close menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <ul class="nav-list">
+      <li><a class="nav-item" href="index.html">Home</a></li>
+      <li><a class="nav-item" href="sudoku.html">Sudoku</a></li>
+      <li><a class="nav-item" href="music.html">Mood Radio</a></li>
+      <li><a class="nav-item" href="image-analyzer.html">Image Analyzer</a></li>
+      <li><a class="nav-item" href="research.html">Video Research Center</a></li>
+      <li><a class="nav-item" href="architecture.html">Architecture</a></li>
+    </ul>
+  </nav>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  </button>
+
+  <main class="card">
+    <!-- Header -->
+    <div class="card-header">
+      <div class="icon-wrap">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </div>
+      <h1>Video Research Center</h1>
+      <p style="font-style:italic; font-size:0.85rem; margin-top:0.25rem;"><span class="rainbow-text">Powered by Claude Opus 4.6</span></p>
+      <p class="subtitle">Enter a topic to discover and summarize YouTube videos</p>
+    </div>
+
+    <!-- Search form (sticky) -->
+    <div class="search-sticky">
+      <div class="search-section">
+        <input type="text" class="search-input" id="topic-input" placeholder="e.g. quantum computing basics" autocomplete="off" />
+        <button class="search-btn" id="search-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          Research
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading state -->
+    <div id="loading-section" hidden>
+      <div class="loading-section">
+        <div class="spinner"></div>
+        <p class="loading-text">Searching videos and generating summaries...</p>
+        <p class="loading-sub">This may take 15-30 seconds</p>
+      </div>
+    </div>
+
+    <!-- Error state -->
+    <div id="error-section" hidden>
+      <p class="error-message" id="error-msg"></p>
+    </div>
+
+    <!-- Results -->
+    <div id="results-section" hidden>
+      <p class="results-header">Results for "<span id="results-topic"></span>"</p>
+      <div id="results-container"></div>
+    </div>
+  </main>
+
+  <!-- Video modal -->
+  <div class="video-modal-overlay" id="video-modal">
+    <div class="video-modal">
+      <button class="video-modal-close" id="modal-close" aria-label="Close video">&times;</button>
+      <iframe id="modal-iframe" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <!-- Super Summary modal -->
+  <div class="super-modal-overlay" id="super-modal">
+    <div class="super-modal">
+      <button class="super-modal-close" id="super-modal-close" aria-label="Close summary">&times;</button>
+      <div class="super-modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        Super Summary
+      </div>
+      <div id="super-modal-content" class="super-modal-content"></div>
+    </div>
+  </div>
+
+  <!-- Floating Fireball Super Summary button -->
+  <button class="fireball-btn" id="fireball-btn" onclick="openSuperSummary()" aria-label="Super Summary">
+    <span class="flame-icon">🔥</span>
+    <span class="tooltip">Super Summary</span>
+  </button>
+
+  <script>
+    // ── Navigation ─────────────────────────────────────────────────
+    const hamburgerBtn = document.getElementById('hamburger');
+    const navDrawer    = document.getElementById('nav-drawer');
+    const navOverlay   = document.getElementById('nav-overlay');
+    const navClose     = document.getElementById('nav-close');
+
+    function openNav() { navDrawer.classList.add('open'); navOverlay.classList.add('open'); hamburgerBtn.setAttribute('aria-expanded','true'); navDrawer.setAttribute('aria-hidden','false'); }
+    function closeNav() { navDrawer.classList.remove('open'); navOverlay.classList.remove('open'); hamburgerBtn.setAttribute('aria-expanded','false'); navDrawer.setAttribute('aria-hidden','true'); }
+    hamburgerBtn.addEventListener('click', openNav);
+    navClose.addEventListener('click', closeNav);
+    navOverlay.addEventListener('click', closeNav);
+
+    // ── Theme ──────────────────────────────────────────────────────
+    const root = document.documentElement;
+    const toggleBtn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme', 'dark');
+    toggleBtn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+
+    // ── Research logic ─────────────────────────────────────────────
+    const topicInput     = document.getElementById('topic-input');
+    const searchBtn      = document.getElementById('search-btn');
+    const loadingSection = document.getElementById('loading-section');
+    const errorSection   = document.getElementById('error-section');
+    const errorMsg       = document.getElementById('error-msg');
+    const resultsSection = document.getElementById('results-section');
+    const resultsTopic   = document.getElementById('results-topic');
+    const resultsContainer = document.getElementById('results-container');
+
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:8788'
+      : 'https://claudecodeproject.onrender.com';
+
+    let lastResults = [];
+    let lastTopic = '';
+    const fireballBtn = document.getElementById('fireball-btn');
+
+    searchBtn.addEventListener('click', doResearch);
+    topicInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); doResearch(); }
+    });
+
+    async function doResearch() {
+      const topic = topicInput.value.trim();
+      if (!topic) return;
+
+      loadingSection.hidden = false;
+      resultsSection.hidden = true;
+      errorSection.hidden = true;
+      searchBtn.disabled = true;
+      fireballBtn.classList.remove('visible');
+
+      try {
+        const res = await fetch(`${API_BASE}/research`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic, maxVideos: 5 })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Research failed');
+
+        lastResults = data.results || [];
+        lastTopic = topic;
+
+        if (lastResults.length === 0) {
+          resultsContainer.innerHTML = '<p class="no-results">No videos found for this topic. Try a different search.</p>';
+        } else {
+          renderResults(lastResults);
+        }
+
+        resultsTopic.textContent = topic;
+        resultsSection.hidden = false;
+        if (lastResults.length > 0) fireballBtn.classList.add('visible');
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (err) {
+        errorMsg.textContent = err.message;
+        errorSection.hidden = false;
+      } finally {
+        loadingSection.hidden = true;
+        searchBtn.disabled = false;
+      }
+    }
+
+    function renderResults(results) {
+      const INITIAL_SHOW = 3;
+      const cards = results.map(renderCard);
+      let html = '';
+
+      // Show first 3
+      cards.forEach((card, i) => {
+        html += i < INITIAL_SHOW ? card : `<div class="extra-result" hidden>${card}</div>`;
+      });
+
+      // Actions row
+      html += '<div class="results-actions">';
+      if (results.length > INITIAL_SHOW) {
+        html += `<button class="show-more-btn" id="show-more-btn" onclick="showMoreResults()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+          Show ${results.length - INITIAL_SHOW} more result${results.length - INITIAL_SHOW > 1 ? 's' : ''}
+        </button>`;
+      }
+      // Super Summary button is at the top next to the header
+      html += '</div>';
+
+      resultsContainer.innerHTML = html;
+    }
+
+    function showMoreResults() {
+      document.querySelectorAll('.extra-result').forEach(el => {
+        el.hidden = false;
+        el.style.display = '';
+      });
+      const btn = document.getElementById('show-more-btn');
+      if (btn) btn.remove();
+    }
+
+    function formatViews(n) {
+      if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M views';
+      if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K views';
+      return n + ' views';
+    }
+
+    function renderCard(video) {
+      const bullets = video.bullets && video.bullets.length > 0
+        ? `<ul class="bullet-list">${video.bullets.map(b => `<li>${escHtml(b)}</li>`).join('')}</ul>`
+        : '<p class="no-transcript">Summary unavailable.</p>';
+
+      const metaParts = [video.channel, video.duration];
+      if (video.views) metaParts.push(formatViews(video.views));
+      const meta = metaParts.filter(Boolean).join(' \u00B7 ');
+
+      return `
+        <div class="result-card">
+          <div class="video-header">
+            <div class="video-thumb-wrap" onclick="openVideoModal('${escHtml(video.videoId)}')">
+              <div class="play-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+              </div>
+              <img class="video-thumb" src="${escHtml(video.thumbnail)}" alt="${escHtml(video.title)}" loading="lazy" />
+            </div>
+            <div class="video-info">
+              <a class="video-title" href="#" onclick="openVideoModal('${escHtml(video.videoId)}'); return false;">${escHtml(video.title)}</a>
+              <span class="video-meta">${escHtml(meta)}</span>
+            </div>
+          </div>
+          ${bullets}
+        </div>
+      `;
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Video modal ───────────────────────────────────────────────
+    const videoModal = document.getElementById('video-modal');
+    const modalIframe = document.getElementById('modal-iframe');
+    const modalClose = document.getElementById('modal-close');
+
+    function openVideoModal(videoId) {
+      modalIframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+      videoModal.classList.add('open');
+    }
+
+    function closeVideoModal() {
+      videoModal.classList.remove('open');
+      modalIframe.src = '';
+    }
+
+    modalClose.addEventListener('click', closeVideoModal);
+    videoModal.addEventListener('click', (e) => {
+      if (e.target === videoModal) closeVideoModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && videoModal.classList.contains('open')) closeVideoModal();
+    });
+
+    // ── Super Summary modal ──────────────────────────────────────
+    const superModal = document.getElementById('super-modal');
+    const superModalContent = document.getElementById('super-modal-content');
+    const superModalClose = document.getElementById('super-modal-close');
+
+    async function openSuperSummary() {
+      superModalContent.innerHTML = '<div class="super-modal-loading"><div class="spinner"></div><p class="loading-text">Generating super summary...</p></div>';
+      superModal.classList.add('open');
+
+      try {
+        const res = await fetch(`${API_BASE}/super-summary`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: lastTopic, results: lastResults })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Summary failed');
+        superModalContent.textContent = data.summary;
+      } catch (err) {
+        superModalContent.innerHTML = `<p style="color:var(--error);">${escHtml(err.message)}</p>`;
+      }
+    }
+
+    function closeSuperModal() {
+      superModal.classList.remove('open');
+    }
+
+    superModalClose.addEventListener('click', closeSuperModal);
+    superModal.addEventListener('click', (e) => {
+      if (e.target === superModal) closeSuperModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && superModal.classList.contains('open')) closeSuperModal();
+    });
+
+    // ── Star cursor + Particle trail ──────────────────────────
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      const darkColors  = ['#818cf8','#38bdf8','#34d399','#f472b6','#fb923c'];
+      const lightColors = ['#6366f1','#0ea5e9','#10b981','#ec4899','#f97316'];
+      const star = document.createElement('div');
+      star.id = 'star-cursor';
+      star.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z"
+          fill="#6366f1" stroke="#6366f1" stroke-width="0.5" stroke-linejoin="round"/></svg>`;
+      document.body.appendChild(star);
+      let spinTimer = null;
+      document.addEventListener('mousemove', (e) => {
+        star.style.left = e.clientX + 'px';
+        star.style.top  = e.clientY + 'px';
+        star.classList.add('spinning');
+        clearTimeout(spinTimer);
+        spinTimer = setTimeout(() => star.classList.remove('spinning'), 150);
+      });
+      document.addEventListener('mouseleave', () => star.style.opacity = '0');
+      document.addEventListener('mouseenter', () => star.style.opacity = '1');
+      let lastX = -999, lastY = -999;
+      document.addEventListener('mousemove', (e) => {
+        const dx = e.clientX - lastX, dy = e.clientY - lastY;
+        if (Math.sqrt(dx*dx + dy*dy) < 12) return;
+        lastX = e.clientX; lastY = e.clientY;
+        const isDark = root.getAttribute('data-theme') === 'dark';
+        const colors = isDark ? darkColors : lightColors;
+        const dot = document.createElement('div');
+        dot.className = 'trail-particle';
+        const size = Math.random() * 6 + 4;
+        dot.style.cssText = `width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};left:${e.clientX}px;top:${e.clientY}px;opacity:${isDark?0.85:0.7}`;
+        document.body.appendChild(dot);
+        dot.addEventListener('animationend', () => dot.remove());
+      });
+    }
+  </script>
+</body>
+</html>
