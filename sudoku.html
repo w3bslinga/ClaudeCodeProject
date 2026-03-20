@@ -712,6 +712,42 @@
 
     // Start on load
     newGame();
+
+    // ── Star cursor + Particle trail ──────────────────────────
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      const darkColors  = ['#818cf8','#38bdf8','#34d399','#f472b6','#fb923c'];
+      const lightColors = ['#6366f1','#0ea5e9','#10b981','#ec4899','#f97316'];
+      const star = document.createElement('div');
+      star.id = 'star-cursor';
+      star.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z"
+          fill="#6366f1" stroke="#6366f1" stroke-width="0.5" stroke-linejoin="round"/></svg>`;
+      document.body.appendChild(star);
+      let spinTimer = null;
+      document.addEventListener('mousemove', (e) => {
+        star.style.left = e.clientX + 'px';
+        star.style.top  = e.clientY + 'px';
+        star.classList.add('spinning');
+        clearTimeout(spinTimer);
+        spinTimer = setTimeout(() => star.classList.remove('spinning'), 150);
+      });
+      document.addEventListener('mouseleave', () => star.style.opacity = '0');
+      document.addEventListener('mouseenter', () => star.style.opacity = '1');
+      let lastX = -999, lastY = -999;
+      document.addEventListener('mousemove', (e) => {
+        const dx = e.clientX - lastX, dy = e.clientY - lastY;
+        if (Math.sqrt(dx*dx + dy*dy) < 12) return;
+        lastX = e.clientX; lastY = e.clientY;
+        const isDark = root.getAttribute('data-theme') === 'dark';
+        const colors = isDark ? darkColors : lightColors;
+        const dot = document.createElement('div');
+        dot.className = 'trail-particle';
+        const size = Math.random() * 6 + 4;
+        dot.style.cssText = `width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};left:${e.clientX}px;top:${e.clientY}px;opacity:${isDark?0.85:0.7}`;
+        document.body.appendChild(dot);
+        dot.addEventListener('animationend', () => dot.remove());
+      });
+    }
   </script>
 </body>
 </html>
