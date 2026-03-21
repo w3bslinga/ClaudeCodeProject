@@ -52,6 +52,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self._cors()
         self.end_headers()
 
+    def do_GET(self):
+        # Handle transcript proxy endpoint
+        if self.path.startswith("/transcript?"):
+            self._handle_transcript()
+        else:
+            super().do_GET()
+
     def do_POST(self):
         if self.path == "/analyze":
             self._handle_analyze()
@@ -59,6 +66,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._handle_chat()
         elif self.path == "/research":
             self._handle_research()
+        elif self.path == "/summarize":
+            self._handle_summarize()
         elif self.path == "/super-summary":
             self._handle_super_summary()
         else:
@@ -244,17 +253,100 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self._json_error(500, str(e))
 
+    def _handle_transcript(self):
+        """Proxy endpoint to fetch a YouTube video transcript."""
+        from urllib.parse import urlparse, parse_qs
+        import xml.etree.ElementTree as ET
+
+        query = parse_qs(urlparse(self.path).query)
+        vid_id = query.get("v", [None])[0]
+        if not vid_id:
+            self._json_error(400, "Missing video ID")
+            return
+
+        # Method 1: youtube-transcript-api
+        try:
+            yt_transcript = YouTubeTranscriptApi()
+            result = yt_transcript.fetch(vid_id)
+            text = " ".join(s.text for s in result.snippets)
+            if text.strip():
+                print(f"  ✅ Transcript for {vid_id} via API ({len(text)} chars)")
+                self._json_ok({"transcript": text[:15000]})
+                return
+        except Exception as e:
+            print(f"  ⚠️ API transcript failed for {vid_id}: {type(e).__name__}: {e}")
+
+        # Method 2: YouTube Innertube API (no scraping, uses YouTube's internal API)
+        try:
+            innertube_payload = json.dumps({
+                "context": {
+                    "client": {
+                        "clientName": "WEB",
+                        "clientVersion": "2.20240101.00.00"
+                    }
+                },
+                "videoId": vid_id
+            }).encode()
+
+            # First get video info to find caption track
+            innertube_req = urllib.request.Request(
+                "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
+                data=innertube_payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(innertube_req, timeout=15) as resp:
+                player_data = json.loads(resp.read())
+
+            captions = player_data.get("captions", {}).get("playerCaptionsTracklistRenderer", {})
+            tracks = captions.get("captionTracks", [])
+            if not tracks:
+                print(f"  ❌ No caption tracks for {vid_id}")
+                self._json_ok({"transcript": None})
+                return
+
+            # Prefer English, fallback to first track
+            cap_url = tracks[0].get("baseUrl", "")
+            for t in tracks:
+                if t.get("languageCode", "").startswith("en"):
+                    cap_url = t.get("baseUrl", "")
+                    break
+
+            if not cap_url:
+                self._json_ok({"transcript": None})
+                return
+
+            # Fetch the caption XML
+            cap_req = urllib.request.Request(cap_url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            })
+            with urllib.request.urlopen(cap_req, timeout=10) as cr:
+                cap_xml = cr.read().decode("utf-8", errors="replace")
+
+            root = ET.fromstring(cap_xml)
+            texts = [elem.text for elem in root.findall(".//text") if elem.text]
+            text = " ".join(texts)
+            if text.strip():
+                print(f"  ✅ Transcript for {vid_id} via Innertube ({len(text)} chars)")
+                self._json_ok({"transcript": text[:15000]})
+                return
+            else:
+                print(f"  ❌ Empty transcript for {vid_id}")
+        except Exception as e2:
+            print(f"  ❌ Innertube failed for {vid_id}: {type(e2).__name__}: {e2}")
+
+        self._json_ok({"transcript": None})
+
     def _handle_research(self):
+        """Step 1: Search YouTube, return video metadata (no transcripts - done client-side)."""
         try:
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length))
         except Exception:
             self._json_error(400, "Invalid request body")
-            return
-
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        if not api_key:
-            self._json_error(401, "ANTHROPIC_API_KEY is not set.")
             return
 
         yt_key = os.environ.get("YOUTUBE_API_KEY", "")
@@ -263,9 +355,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
 
         topic = body.get("topic", "").strip()
-        max_results = min(body.get("maxVideos", 5), 5)
-        # Fetch more to compensate for videos without transcripts
-        fetch_count = min(max_results * 2, 8)
+        fetch_count = min(body.get("maxVideos", 8), 8)
 
         if not topic:
             self._json_error(400, "No topic provided")
@@ -285,7 +375,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         items = search_resp.get("items", [])
         print(f"  🔍 YouTube search for '{topic}': {len(items)} results")
         if not items:
-            self._json_ok({"results": [], "debug": "YouTube returned 0 search results"})
+            self._json_ok({"videos": []})
             return
 
         # Extract video metadata
@@ -302,8 +392,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 "channel": snippet.get("channelTitle", ""),
                 "duration": "",
                 "views": 0,
-                "hasTranscript": False,
-                "bullets": [],
             })
             video_ids.append(vid_id)
 
@@ -315,131 +403,86 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             duration_map = {}
             views_map = {}
             for d in details_resp.get("items", []):
-                raw = d["contentDetails"]["duration"]  # e.g. PT12M34S
+                raw = d["contentDetails"]["duration"]
                 duration_map[d["id"]] = self._parse_duration(raw)
                 views_map[d["id"]] = int(d.get("statistics", {}).get("viewCount", 0))
             for v in videos:
                 v["duration"] = duration_map.get(v["videoId"], "")
                 v["views"] = views_map.get(v["videoId"], 0)
         except Exception:
-            pass  # durations/views are optional
+            pass
 
-        # 3. Fetch transcripts (try youtube-transcript-api first, fallback to direct scrape)
-        transcripts = {}  # videoId -> text
-        yt_transcript = YouTubeTranscriptApi()
-        for vid_id in video_ids:
-            # Method 1: youtube-transcript-api
-            try:
-                result = yt_transcript.fetch(vid_id)
-                text = " ".join(s.text for s in result.snippets)
-                transcripts[vid_id] = text[:15000]
-                print(f"  ✅ Transcript fetched for {vid_id} ({len(text)} chars)")
-                continue
-            except Exception as e:
-                print(f"  ⚠️ youtube-transcript-api failed for {vid_id}: {type(e).__name__}: {e}")
+        self._json_ok({"videos": videos})
 
-            # Method 2: Direct caption track fetch via YouTube's timedtext endpoint
-            try:
-                import re as _re
-                import xml.etree.ElementTree as ET
-                watch_url = f"https://www.youtube.com/watch?v={vid_id}"
-                watch_req = urllib.request.Request(watch_url, headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Accept-Language": "en-US,en;q=0.9",
-                })
-                with urllib.request.urlopen(watch_req, timeout=10) as wr:
-                    page_html = wr.read().decode("utf-8", errors="replace")
-                # Find caption track URL in page source
-                cap_match = _re.search(r'"captionTracks":\[.*?"baseUrl":"(.*?)"', page_html)
-                if not cap_match:
-                    print(f"  ❌ No caption track found for {vid_id}")
-                    continue
-                cap_url = cap_match.group(1).replace("\\u0026", "&")
-                cap_req = urllib.request.Request(cap_url, headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                })
-                with urllib.request.urlopen(cap_req, timeout=10) as cr:
-                    cap_xml = cr.read().decode("utf-8", errors="replace")
-                root = ET.fromstring(cap_xml)
-                texts = [elem.text for elem in root.findall(".//text") if elem.text]
-                text = " ".join(texts)
-                if text.strip():
-                    transcripts[vid_id] = text[:15000]
-                    print(f"  ✅ Transcript fetched via fallback for {vid_id} ({len(text)} chars)")
-                else:
-                    print(f"  ❌ Empty transcript for {vid_id}")
-            except Exception as e2:
-                print(f"  ❌ Fallback also failed for {vid_id}: {type(e2).__name__}: {e2}")
+    def _handle_summarize(self):
+        """Step 2: Receive transcripts from client, summarize with Claude."""
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+        except Exception:
+            self._json_error(400, "Invalid request body")
+            return
 
-        # Mark which have transcripts
-        for v in videos:
-            if v["videoId"] in transcripts:
-                v["hasTranscript"] = True
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            self._json_error(401, "ANTHROPIC_API_KEY is not set.")
+            return
 
-        # 4. Summarize with Claude (single batch call)
-        if transcripts:
-            prompt_parts = []
-            for vid_id, text in transcripts.items():
-                title = next((v["title"] for v in videos if v["videoId"] == vid_id), "")
-                prompt_parts.append(f'Video (id: {vid_id}): "{title}"\nTranscript:\n{text}')
+        # Expect: { "videos": [{ "videoId", "title", "transcript" }, ...] }
+        video_data = body.get("videos", [])
+        if not video_data:
+            self._json_error(400, "No video transcripts provided")
+            return
 
-            user_prompt = (
-                "Summarize each of the following YouTube video transcripts into 5-8 concise bullet points "
-                "capturing the key insights and facts. Keep each bullet under 2 sentences.\n\n"
-                "Return ONLY a JSON array with objects like: "
-                '[{"videoId": "...", "bullets": ["...", ...]}}]\n\n'
-                + "\n\n---\n\n".join(prompt_parts)
-            )
+        prompt_parts = []
+        for vd in video_data:
+            transcript = vd.get("transcript", "")[:15000]
+            prompt_parts.append(f'Video (id: {vd["videoId"]}): "{vd.get("title", "")}"\nTranscript:\n{transcript}')
 
-            payload = {
-                "model": CLAUDE_MODEL,
-                "max_tokens": 4096,
-                "system": "You are a research assistant. Return only valid JSON, no markdown fences.",
-                "messages": [{"role": "user", "content": user_prompt}],
-            }
+        user_prompt = (
+            "Summarize each of the following YouTube video transcripts into 5-8 concise bullet points "
+            "capturing the key insights and facts. Keep each bullet under 2 sentences.\n\n"
+            "Return ONLY a JSON array with objects like: "
+            '[{"videoId": "...", "bullets": ["...", ...]}}]\n\n'
+            + "\n\n---\n\n".join(prompt_parts)
+        )
 
-            req = urllib.request.Request(
-                CLAUDE_API_URL,
-                data=json.dumps(payload).encode(),
-                headers={
-                    "Content-Type": "application/json",
-                    "x-api-key": api_key,
-                    "anthropic-version": "2023-06-01",
-                },
-                method="POST",
-            )
+        payload = {
+            "model": CLAUDE_MODEL,
+            "max_tokens": 4096,
+            "system": "You are a research assistant. Return only valid JSON, no markdown fences.",
+            "messages": [{"role": "user", "content": user_prompt}],
+        }
 
-            try:
-                with urllib.request.urlopen(req, timeout=120) as resp:
-                    result = json.loads(resp.read())
-                    text_resp = result["content"][0]["text"]
-                    # Strip markdown fences if present
-                    text_resp = text_resp.strip()
-                    if text_resp.startswith("```"):
-                        text_resp = text_resp.split("\n", 1)[1]
-                        if text_resp.endswith("```"):
-                            text_resp = text_resp[:-3]
-                    summaries = json.loads(text_resp.strip())
-                    summary_map = {s["videoId"]: s["bullets"] for s in summaries}
-                    for v in videos:
-                        if v["videoId"] in summary_map:
-                            v["bullets"] = summary_map[v["videoId"]]
-            except urllib.error.HTTPError as e:
-                err_body = e.read().decode()
-                print(f"  ⚠️ Summarization HTTP error {e.code}: {err_body[:500]}")
-            except Exception as e:
-                # If summarization fails, still return videos without bullets
-                print(f"  ⚠️ Summarization error: {type(e).__name__}: {e}")
+        req = urllib.request.Request(
+            CLAUDE_API_URL,
+            data=json.dumps(payload).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+            },
+            method="POST",
+        )
 
-        # Filter to only videos with transcripts, sort by views descending, cap at max_results
-        total_found = len(videos)
-        with_transcripts = len([v for v in videos if v["hasTranscript"]])
-        print(f"  📊 {total_found} videos found, {with_transcripts} with transcripts, {len(transcripts)} transcripts fetched")
-        videos = [v for v in videos if v["hasTranscript"]]
-        videos.sort(key=lambda v: v["views"], reverse=True)
-        videos = videos[:max_results]
-
-        self._json_ok({"results": videos, "debug": f"{total_found} found, {with_transcripts} with transcripts"})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                result = json.loads(resp.read())
+                text_resp = result["content"][0]["text"]
+                text_resp = text_resp.strip()
+                if text_resp.startswith("```"):
+                    text_resp = text_resp.split("\n", 1)[1]
+                    if text_resp.endswith("```"):
+                        text_resp = text_resp[:-3]
+                summaries = json.loads(text_resp.strip())
+                self._json_ok({"summaries": summaries})
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode()
+            print(f"  ⚠️ Summarization HTTP error {e.code}: {err_body[:500]}")
+            self._json_error(e.code, f"Claude API error: {err_body[:200]}")
+        except Exception as e:
+            print(f"  ⚠️ Summarization error: {type(e).__name__}: {e}")
+            self._json_error(500, str(e))
 
     def _handle_super_summary(self):
         try:
