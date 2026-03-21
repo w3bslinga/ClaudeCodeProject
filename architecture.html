@@ -724,6 +724,12 @@
         <span class="node-tag tag-green">Static Page</span>
       </div>
       <div class="node">
+        <div class="node-icon">🔬</div>
+        <div class="node-title">research.html</div>
+        <div class="node-sub">Video Research Center. Topic search, YouTube video discovery, AI-powered transcript/description summarization. Calls Render backend /research &amp; /super-summary</div>
+        <span class="node-tag tag-orange">AI Feature</span>
+      </div>
+      <div class="node">
         <div class="node-icon">🧩</div>
         <div class="node-title">sudoku.html</div>
         <div class="node-sub">Interactive Sudoku game. Pure JS client-side logic, no backend dependency</div>
@@ -740,6 +746,7 @@
       <div class="info-chip"><div class="dot dot-green"></div> Repo: w3bslinga/ClaudeCodeProject · branch: main</div>
       <div class="info-chip"><div class="dot dot-blue"></div> Theme: CSS variables + data-theme, LocalStorage persistence</div>
       <div class="info-chip"><div class="dot dot-orange"></div> Image resize: Canvas API client-side before upload (≤5 MB base64)</div>
+      <div class="info-chip"><div class="dot dot-orange"></div> Video Research: sticky search, fireball Super Summary, video modal player</div>
     </div>
   </div>
 
@@ -753,9 +760,9 @@
       <div style="font-size:0.68rem;color:var(--muted);margin-top:4px;text-align:center">Formspree<br><code style="font-size:0.62rem;color:var(--accent-teal)">formspree.io/f/mvzbjenk</code></div>
     </div>
     <!-- right: Render backend -->
-    <div class="connector" style="flex:1;max-width:220px">
+    <div class="connector" style="flex:1;max-width:320px">
       <div class="line"></div>
-      <span class="label https">POST /analyze · HTTPS · CORS</span>
+      <span class="label https">POST /analyze · /research · /super-summary · HTTPS · CORS</span>
       <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
     </div>
   </div>
@@ -771,10 +778,12 @@
         <div class="node-title">server.py — Python HTTP Proxy</div>
         <div class="node-sub">
           Endpoint: <code style="color:var(--accent-teal)">claudecodeproject.onrender.com</code><br>
-          Port: <strong>8788</strong>&nbsp;·&nbsp;60s timeout<br><br>
+          Port: <strong>8788</strong>&nbsp;·&nbsp;60s timeout (120s for research)<br><br>
           <strong>Routes:</strong><br>
           &nbsp;POST <code>/analyze</code> → validate → moderate → forward to Claude API<br>
           &nbsp;POST <code>/chat</code> → follow-up conversation with image context<br>
+          &nbsp;POST <code>/research</code> → YouTube search → fetch transcripts/descriptions → Claude summarization<br>
+          &nbsp;POST <code>/super-summary</code> → consolidate all video summaries into one overview<br>
           &nbsp;GET  <code>/*</code> → serve static files (dev)<br><br>
           <strong>Responsibilities:</strong> CORS headers, API key guard (env-only), input validation, image media-type check, content moderation, auto-resize fallback, JSON response
         </div>
@@ -783,37 +792,75 @@
     </div>
     <div class="info-row">
       <div class="info-chip"><div class="dot dot-orange"></div> CORS: Allow-Origin *, Methods: POST OPTIONS</div>
-      <div class="info-chip"><div class="dot dot-orange"></div> API key read from env only — never from request</div>
+      <div class="info-chip"><div class="dot dot-orange"></div> API keys read from env only — ANTHROPIC_API_KEY + YOUTUBE_API_KEY</div>
       <div class="info-chip"><div class="dot dot-orange"></div> Accepted MIME: jpeg, png, gif, webp · limit 5 MB base64</div>
+      <div class="info-chip"><div class="dot dot-orange"></div> Deps: google-api-python-client, youtube-transcript-api, yt-dlp</div>
     </div>
   </div>
 
-  <!-- connector to Anthropic -->
-  <div class="connector" style="align-self:flex-end;width:60%;min-width:320px">
-    <div class="line"></div>
-    <span class="label api">POST /v1/messages · Bearer ANTHROPIC_API_KEY</span>
-    <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
+  <!-- connectors to external APIs -->
+  <div style="display:flex;justify-content:center;align-items:flex-start;gap:80px;width:60%;min-width:320px;margin-left:auto">
+    <!-- left: YouTube API -->
+    <div class="connector" style="flex:1;max-width:260px">
+      <div class="line"></div>
+      <span class="label api">YouTube Data API v3 · YOUTUBE_API_KEY</span>
+      <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
+    </div>
+    <!-- right: Anthropic API -->
+    <div class="connector" style="flex:1;max-width:260px">
+      <div class="line"></div>
+      <span class="label api">POST /v1/messages · ANTHROPIC_API_KEY</span>
+      <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
+    </div>
   </div>
 
   <!-- ══════════════════════════════════════════
-       TIER 5: AI — Anthropic Claude API
+       TIER 5: EXTERNAL APIs
   ══════════════════════════════════════════ -->
-  <div class="zone zone-ai" style="margin-left:auto;width:60%;min-width:320px">
-    <span class="zone-label">Tier 5 — AI Service · Anthropic Claude API</span>
-    <div class="nodes">
-      <div class="node" style="max-width:100%">
-        <div class="node-icon">🤖</div>
-        <div class="node-title">Claude Opus 4.6</div>
-        <div class="node-sub">
-          Model: <code style="color:var(--accent-purple)">claude-opus-4-6</code><br>
-          Endpoint: <code style="color:var(--accent-purple)">api.anthropic.com/v1/messages</code><br>
-          Max tokens: <strong>1,024</strong><br><br>
-          Input: base64-encoded image + user prompt<br>
-          Output: natural-language image analysis
+  <div style="display:flex;gap:20px;width:60%;min-width:320px;margin-left:auto">
+
+    <!-- YouTube Data API -->
+    <div class="zone zone-ai" style="flex:1;margin:0">
+      <span class="zone-label">Tier 5a — YouTube Data API v3</span>
+      <div class="nodes">
+        <div class="node" style="max-width:100%">
+          <div class="node-icon">📺</div>
+          <div class="node-title">YouTube Data API v3</div>
+          <div class="node-sub">
+            Endpoint: <code style="color:var(--accent-red)">googleapis.com/youtube/v3</code><br>
+            Quota: <strong>10,000 units/day</strong><br><br>
+            <strong>Used by /research:</strong><br>
+            &nbsp;<code>search.list</code> → find videos by topic (100 units)<br>
+            &nbsp;<code>videos.list</code> → durations, views, descriptions (3 units)<br><br>
+            Transcript fallback: yt-dlp / youtube-transcript-api (blocked on datacenter IPs → uses descriptions)
+          </div>
+          <span class="node-tag tag-red">Video Search · Metadata</span>
         </div>
-        <span class="node-tag tag-purple">Vision · LLM</span>
       </div>
     </div>
+
+    <!-- Anthropic Claude API -->
+    <div class="zone zone-ai" style="flex:1;margin:0">
+      <span class="zone-label">Tier 5b — Anthropic Claude API</span>
+      <div class="nodes">
+        <div class="node" style="max-width:100%">
+          <div class="node-icon">🤖</div>
+          <div class="node-title">Claude Opus 4.6</div>
+          <div class="node-sub">
+            Model: <code style="color:var(--accent-purple)">claude-opus-4-6</code><br>
+            Endpoint: <code style="color:var(--accent-purple)">api.anthropic.com/v1/messages</code><br><br>
+            <strong>Image Analyzer:</strong> 1,024 tokens<br>
+            &nbsp;Input: base64 image + prompt → analysis<br><br>
+            <strong>Video Research:</strong> 4,096 tokens<br>
+            &nbsp;Input: transcripts/descriptions → bullet summaries<br><br>
+            <strong>Super Summary:</strong> 2,048 tokens<br>
+            &nbsp;Input: all bullet summaries → consolidated overview
+          </div>
+          <span class="node-tag tag-purple">Vision · LLM · Summarization</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ══════════════════════════════════════════
