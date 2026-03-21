@@ -58,6 +58,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         # Handle transcript proxy endpoint
         if self.path.startswith("/transcript?"):
             self._handle_transcript()
+        elif self.path.startswith("/debug-transcript?"):
+            self._handle_debug_transcript()
         else:
             super().do_GET()
 
@@ -254,6 +256,40 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._json_error(e.code, msg)
         except Exception as e:
             self._json_error(500, str(e))
+
+    def _handle_debug_transcript(self):
+        """Debug endpoint to see raw yt-dlp output."""
+        from urllib.parse import urlparse, parse_qs
+        query = parse_qs(urlparse(self.path).query)
+        vid_id = query.get("v", [None])[0]
+        if not vid_id:
+            self._json_error(400, "Missing video ID")
+            return
+        try:
+            url = f"https://www.youtube.com/watch?v={vid_id}"
+            ydl_opts = {
+                "writesubtitles": True,
+                "writeautomaticsub": True,
+                "subtitleslangs": ["en", "en-US", "en-GB"],
+                "subtitlesformat": "json3",
+                "skip_download": True,
+                "quiet": True,
+                "no_warnings": True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                subs = info.get("subtitles", {})
+                auto_subs = info.get("automatic_captions", {})
+                self._json_ok({
+                    "title": info.get("title"),
+                    "manual_sub_langs": list(subs.keys())[:10],
+                    "auto_sub_langs": list(auto_subs.keys())[:10],
+                    "has_manual_en": any(l.startswith("en") for l in subs.keys()),
+                    "has_auto_en": any(l.startswith("en") for l in auto_subs.keys()),
+                    "playability": info.get("playability_status"),
+                })
+        except Exception as e:
+            self._json_ok({"error": f"{type(e).__name__}: {e}"})
 
     def _handle_transcript(self):
         """Proxy endpoint to fetch a YouTube video transcript using yt-dlp."""
