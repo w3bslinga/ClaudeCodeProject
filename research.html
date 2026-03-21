@@ -346,6 +346,25 @@
       font-style: italic;
     }
 
+    .source-label {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-top: 0.5rem;
+      font-style: italic;
+    }
+    .source-transcript {
+      color: #3fb950;
+      background: rgba(63, 185, 80, 0.1);
+      border: 1px solid rgba(63, 185, 80, 0.25);
+    }
+    .source-description {
+      color: #f0883e;
+      background: rgba(240, 136, 62, 0.1);
+      border: 1px solid rgba(240, 136, 62, 0.25);
+    }
+
     .no-results {
       text-align: center;
       padding: 2rem 0;
@@ -1069,6 +1088,10 @@
         ? `<ul class="bullet-list">${video.bullets.map(b => `<li>${escHtml(b)}</li>`).join('')}</ul>`
         : '<p class="no-transcript">Summary unavailable.</p>';
 
+      const sourceLabel = video.hasTranscript
+        ? '<span class="source-label source-transcript">Summarized from transcript</span>'
+        : '<span class="source-label source-description">Summarized from description</span>';
+
       const metaParts = [video.channel, video.duration];
       if (video.views) metaParts.push(formatViews(video.views));
       const meta = metaParts.filter(Boolean).join(' \u00B7 ');
@@ -1088,6 +1111,7 @@
             </div>
           </div>
           ${bullets}
+          ${video.bullets && video.bullets.length > 0 ? sourceLabel : ''}
         </div>
       `;
     }
