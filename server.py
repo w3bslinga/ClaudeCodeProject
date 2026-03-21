@@ -8,12 +8,20 @@ Usage: ANTHROPIC_API_KEY=sk-... python3 server.py
 import http.server
 import json
 import os
+import subprocess
+import sys
 import urllib.request
 import urllib.error
 from pathlib import Path
 
-from googleapiclient.discovery import build as yt_build
-from youtube_transcript_api import YouTubeTranscriptApi
+# Auto-install dependencies if missing (needed for Render deployment)
+try:
+    from googleapiclient.discovery import build as yt_build
+    from youtube_transcript_api import YouTubeTranscriptApi
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+    from googleapiclient.discovery import build as yt_build
+    from youtube_transcript_api import YouTubeTranscriptApi
 
 
 def load_dotenv(path=".env"):
