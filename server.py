@@ -324,18 +324,52 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception:
             pass  # durations/views are optional
 
-        # 3. Fetch transcripts
+        # 3. Fetch transcripts (try youtube-transcript-api first, fallback to direct scrape)
         transcripts = {}  # videoId -> text
         yt_transcript = YouTubeTranscriptApi()
         for vid_id in video_ids:
+            # Method 1: youtube-transcript-api
             try:
                 result = yt_transcript.fetch(vid_id)
                 text = " ".join(s.text for s in result.snippets)
-                # Truncate to ~15k chars
                 transcripts[vid_id] = text[:15000]
                 print(f"  ✅ Transcript fetched for {vid_id} ({len(text)} chars)")
+                continue
             except Exception as e:
-                print(f"  ❌ No transcript for {vid_id}: {type(e).__name__}: {e}")
+                print(f"  ⚠️ youtube-transcript-api failed for {vid_id}: {type(e).__name__}: {e}")
+
+            # Method 2: Direct caption track fetch via YouTube's timedtext endpoint
+            try:
+                import re as _re
+                import xml.etree.ElementTree as ET
+                watch_url = f"https://www.youtube.com/watch?v={vid_id}"
+                watch_req = urllib.request.Request(watch_url, headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Accept-Language": "en-US,en;q=0.9",
+                })
+                with urllib.request.urlopen(watch_req, timeout=10) as wr:
+                    page_html = wr.read().decode("utf-8", errors="replace")
+                # Find caption track URL in page source
+                cap_match = _re.search(r'"captionTracks":\[.*?"baseUrl":"(.*?)"', page_html)
+                if not cap_match:
+                    print(f"  ❌ No caption track found for {vid_id}")
+                    continue
+                cap_url = cap_match.group(1).replace("\\u0026", "&")
+                cap_req = urllib.request.Request(cap_url, headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                })
+                with urllib.request.urlopen(cap_req, timeout=10) as cr:
+                    cap_xml = cr.read().decode("utf-8", errors="replace")
+                root = ET.fromstring(cap_xml)
+                texts = [elem.text for elem in root.findall(".//text") if elem.text]
+                text = " ".join(texts)
+                if text.strip():
+                    transcripts[vid_id] = text[:15000]
+                    print(f"  ✅ Transcript fetched via fallback for {vid_id} ({len(text)} chars)")
+                else:
+                    print(f"  ❌ Empty transcript for {vid_id}")
+            except Exception as e2:
+                print(f"  ❌ Fallback also failed for {vid_id}: {type(e2).__name__}: {e2}")
 
         # Mark which have transcripts
         for v in videos:
