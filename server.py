@@ -18,10 +18,12 @@ from pathlib import Path
 try:
     from googleapiclient.discovery import build as yt_build
     from youtube_transcript_api import YouTubeTranscriptApi
+    import yt_dlp
 except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
     from googleapiclient.discovery import build as yt_build
     from youtube_transcript_api import YouTubeTranscriptApi
+    import yt_dlp
 
 
 def load_dotenv(path=".env"):
@@ -254,9 +256,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._json_error(500, str(e))
 
     def _handle_transcript(self):
-        """Proxy endpoint to fetch a YouTube video transcript."""
+        """Proxy endpoint to fetch a YouTube video transcript using yt-dlp."""
         from urllib.parse import urlparse, parse_qs
-        import xml.etree.ElementTree as ET
+        import tempfile
 
         query = parse_qs(urlparse(self.path).query)
         vid_id = query.get("v", [None])[0]
@@ -264,98 +266,119 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._json_error(400, "Missing video ID")
             return
 
-        # Method 1: youtube-transcript-api
+        # Method 1: yt-dlp (most reliable, handles bot detection)
+        try:
+            url = f"https://www.youtube.com/watch?v={vid_id}"
+            ydl_opts = {
+                "writesubtitles": True,
+                "writeautomaticsub": True,
+                "subtitleslangs": ["en", "en-US", "en-GB"],
+                "subtitlesformat": "json3",
+                "skip_download": True,
+                "quiet": True,
+                "no_warnings": True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+
+                # Check for subtitles
+                subs = info.get("subtitles", {})
+                auto_subs = info.get("automatic_captions", {})
+
+                # Prefer manual English subs, then auto-generated
+                sub_data = None
+                for lang in ["en", "en-US", "en-GB"]:
+                    if lang in subs:
+                        sub_data = subs[lang]
+                        print(f"  📝 Found manual subs ({lang}) for {vid_id}")
+                        break
+                if not sub_data:
+                    for lang in ["en", "en-US", "en-GB", "en-orig"]:
+                        if lang in auto_subs:
+                            sub_data = auto_subs[lang]
+                            print(f"  📝 Found auto subs ({lang}) for {vid_id}")
+                            break
+
+                if not sub_data:
+                    print(f"  ❌ No English subs for {vid_id}. Available: manual={list(subs.keys())[:5]}, auto={list(auto_subs.keys())[:5]}")
+                    self._json_ok({"transcript": None})
+                    return
+
+                # Find json3 or vtt format URL
+                sub_url = None
+                for fmt in sub_data:
+                    if fmt.get("ext") == "json3":
+                        sub_url = fmt.get("url")
+                        break
+                if not sub_url:
+                    for fmt in sub_data:
+                        if fmt.get("ext") == "vtt":
+                            sub_url = fmt.get("url")
+                            break
+                if not sub_url and sub_data:
+                    sub_url = sub_data[0].get("url")
+
+                if not sub_url:
+                    self._json_ok({"transcript": None})
+                    return
+
+                # Fetch the subtitle content
+                sub_req = urllib.request.Request(sub_url, headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                })
+                with urllib.request.urlopen(sub_req, timeout=15) as sr:
+                    sub_content = sr.read().decode("utf-8", errors="replace")
+
+                # Parse based on format
+                text = ""
+                try:
+                    sub_json = json.loads(sub_content)
+                    # json3 format
+                    events = sub_json.get("events", [])
+                    segments = []
+                    for event in events:
+                        segs = event.get("segs", [])
+                        for seg in segs:
+                            t = seg.get("utf8", "").strip()
+                            if t and t != "\n":
+                                segments.append(t)
+                    text = " ".join(segments)
+                except (json.JSONDecodeError, KeyError):
+                    # VTT or other text format - extract text lines
+                    import re
+                    lines = sub_content.split("\n")
+                    text_lines = []
+                    for line in lines:
+                        line = line.strip()
+                        if not line or line.startswith("WEBVTT") or "-->" in line or re.match(r"^\d+$", line):
+                            continue
+                        # Remove VTT tags
+                        clean = re.sub(r"<[^>]+>", "", line)
+                        if clean.strip():
+                            text_lines.append(clean.strip())
+                    text = " ".join(text_lines)
+
+                if text.strip():
+                    print(f"  ✅ Transcript for {vid_id} via yt-dlp ({len(text)} chars)")
+                    self._json_ok({"transcript": text[:15000]})
+                    return
+                else:
+                    print(f"  ❌ Empty transcript for {vid_id}")
+
+        except Exception as e:
+            print(f"  ❌ yt-dlp failed for {vid_id}: {type(e).__name__}: {e}")
+
+        # Method 2: Fallback to youtube-transcript-api
         try:
             yt_transcript = YouTubeTranscriptApi()
             result = yt_transcript.fetch(vid_id)
             text = " ".join(s.text for s in result.snippets)
             if text.strip():
-                print(f"  ✅ Transcript for {vid_id} via API ({len(text)} chars)")
+                print(f"  ✅ Transcript for {vid_id} via youtube-transcript-api ({len(text)} chars)")
                 self._json_ok({"transcript": text[:15000]})
                 return
         except Exception as e:
-            print(f"  ⚠️ API transcript failed for {vid_id}: {type(e).__name__}: {e}")
-
-        # Method 2: YouTube Innertube API with Android client (fewer restrictions)
-        for client_config in [
-            {
-                "clientName": "ANDROID",
-                "clientVersion": "19.09.37",
-                "androidSdkVersion": 30,
-                "userAgent": "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip",
-                "platform": "MOBILE",
-            },
-            {
-                "clientName": "WEB",
-                "clientVersion": "2.20240101.00.00",
-                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            },
-        ]:
-            try:
-                client_name = client_config["clientName"]
-                user_agent = client_config.pop("userAgent", "")
-                platform = client_config.pop("platform", None)
-
-                context = {"client": {**client_config}}
-                if platform:
-                    context["client"]["platform"] = platform
-
-                innertube_payload = json.dumps({
-                    "context": context,
-                    "videoId": vid_id,
-                    "contentCheckOk": True,
-                    "racyCheckOk": True,
-                }).encode()
-
-                innertube_req = urllib.request.Request(
-                    "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
-                    data=innertube_payload,
-                    headers={
-                        "Content-Type": "application/json",
-                        "User-Agent": user_agent,
-                        "Cookie": "SOCS=CAESEwgDEgk2NjI1Njc1NjQaAmVuIAEaBgiA_ZOYBA",
-                    },
-                    method="POST",
-                )
-                with urllib.request.urlopen(innertube_req, timeout=15) as resp:
-                    player_data = json.loads(resp.read())
-
-                playability = player_data.get("playabilityStatus", {}).get("status", "")
-                captions = player_data.get("captions", {}).get("playerCaptionsTracklistRenderer", {})
-                tracks = captions.get("captionTracks", [])
-                print(f"  📡 Innertube {client_name} for {vid_id}: playability={playability}, tracks={len(tracks)}")
-
-                if not tracks:
-                    continue
-
-                # Prefer English, fallback to first track
-                cap_url = tracks[0].get("baseUrl", "")
-                for t in tracks:
-                    if t.get("languageCode", "").startswith("en"):
-                        cap_url = t.get("baseUrl", "")
-                        break
-
-                if not cap_url:
-                    continue
-
-                # Fetch the caption XML
-                cap_req = urllib.request.Request(cap_url, headers={
-                    "User-Agent": user_agent or "Mozilla/5.0",
-                })
-                with urllib.request.urlopen(cap_req, timeout=10) as cr:
-                    cap_xml = cr.read().decode("utf-8", errors="replace")
-
-                root = ET.fromstring(cap_xml)
-                texts = [elem.text for elem in root.findall(".//text") if elem.text]
-                text = " ".join(texts)
-                if text.strip():
-                    print(f"  ✅ Transcript for {vid_id} via {client_name} ({len(text)} chars)")
-                    self._json_ok({"transcript": text[:15000]})
-                    return
-                else:
-                    print(f"  ❌ Empty transcript for {vid_id} via {client_name}")
-            except Exception as e2:
-                print(f"  ❌ Innertube {client_config.get('clientName','?')} failed for {vid_id}: {type(e2).__name__}: {e2}")
+            print(f"  ❌ youtube-transcript-api also failed for {vid_id}: {type(e).__name__}: {e}")
 
         self._json_ok({"transcript": None})
 
