@@ -30,7 +30,7 @@ def load_dotenv(path=".env"):
     except FileNotFoundError:
         pass
 
-PORT = 8788
+PORT = int(os.environ.get("PORT", 8788))
 CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
 CLAUDE_MODEL = "claude-opus-4-6"
 
