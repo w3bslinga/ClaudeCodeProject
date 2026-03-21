@@ -276,67 +276,86 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             print(f"  ⚠️ API transcript failed for {vid_id}: {type(e).__name__}: {e}")
 
-        # Method 2: YouTube Innertube API (no scraping, uses YouTube's internal API)
-        try:
-            innertube_payload = json.dumps({
-                "context": {
-                    "client": {
-                        "clientName": "WEB",
-                        "clientVersion": "2.20240101.00.00"
-                    }
-                },
-                "videoId": vid_id
-            }).encode()
+        # Method 2: YouTube Innertube API with Android client (fewer restrictions)
+        for client_config in [
+            {
+                "clientName": "ANDROID",
+                "clientVersion": "19.09.37",
+                "androidSdkVersion": 30,
+                "userAgent": "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip",
+                "platform": "MOBILE",
+            },
+            {
+                "clientName": "WEB",
+                "clientVersion": "2.20240101.00.00",
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            },
+        ]:
+            try:
+                client_name = client_config["clientName"]
+                user_agent = client_config.pop("userAgent", "")
+                platform = client_config.pop("platform", None)
 
-            # First get video info to find caption track
-            innertube_req = urllib.request.Request(
-                "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
-                data=innertube_payload,
-                headers={
-                    "Content-Type": "application/json",
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(innertube_req, timeout=15) as resp:
-                player_data = json.loads(resp.read())
+                context = {"client": {**client_config}}
+                if platform:
+                    context["client"]["platform"] = platform
 
-            captions = player_data.get("captions", {}).get("playerCaptionsTracklistRenderer", {})
-            tracks = captions.get("captionTracks", [])
-            if not tracks:
-                print(f"  ❌ No caption tracks for {vid_id}")
-                self._json_ok({"transcript": None})
-                return
+                innertube_payload = json.dumps({
+                    "context": context,
+                    "videoId": vid_id,
+                    "contentCheckOk": True,
+                    "racyCheckOk": True,
+                }).encode()
 
-            # Prefer English, fallback to first track
-            cap_url = tracks[0].get("baseUrl", "")
-            for t in tracks:
-                if t.get("languageCode", "").startswith("en"):
-                    cap_url = t.get("baseUrl", "")
-                    break
+                innertube_req = urllib.request.Request(
+                    "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
+                    data=innertube_payload,
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": user_agent,
+                        "Cookie": "SOCS=CAESEwgDEgk2NjI1Njc1NjQaAmVuIAEaBgiA_ZOYBA",
+                    },
+                    method="POST",
+                )
+                with urllib.request.urlopen(innertube_req, timeout=15) as resp:
+                    player_data = json.loads(resp.read())
 
-            if not cap_url:
-                self._json_ok({"transcript": None})
-                return
+                playability = player_data.get("playabilityStatus", {}).get("status", "")
+                captions = player_data.get("captions", {}).get("playerCaptionsTracklistRenderer", {})
+                tracks = captions.get("captionTracks", [])
+                print(f"  📡 Innertube {client_name} for {vid_id}: playability={playability}, tracks={len(tracks)}")
 
-            # Fetch the caption XML
-            cap_req = urllib.request.Request(cap_url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            })
-            with urllib.request.urlopen(cap_req, timeout=10) as cr:
-                cap_xml = cr.read().decode("utf-8", errors="replace")
+                if not tracks:
+                    continue
 
-            root = ET.fromstring(cap_xml)
-            texts = [elem.text for elem in root.findall(".//text") if elem.text]
-            text = " ".join(texts)
-            if text.strip():
-                print(f"  ✅ Transcript for {vid_id} via Innertube ({len(text)} chars)")
-                self._json_ok({"transcript": text[:15000]})
-                return
-            else:
-                print(f"  ❌ Empty transcript for {vid_id}")
-        except Exception as e2:
-            print(f"  ❌ Innertube failed for {vid_id}: {type(e2).__name__}: {e2}")
+                # Prefer English, fallback to first track
+                cap_url = tracks[0].get("baseUrl", "")
+                for t in tracks:
+                    if t.get("languageCode", "").startswith("en"):
+                        cap_url = t.get("baseUrl", "")
+                        break
+
+                if not cap_url:
+                    continue
+
+                # Fetch the caption XML
+                cap_req = urllib.request.Request(cap_url, headers={
+                    "User-Agent": user_agent or "Mozilla/5.0",
+                })
+                with urllib.request.urlopen(cap_req, timeout=10) as cr:
+                    cap_xml = cr.read().decode("utf-8", errors="replace")
+
+                root = ET.fromstring(cap_xml)
+                texts = [elem.text for elem in root.findall(".//text") if elem.text]
+                text = " ".join(texts)
+                if text.strip():
+                    print(f"  ✅ Transcript for {vid_id} via {client_name} ({len(text)} chars)")
+                    self._json_ok({"transcript": text[:15000]})
+                    return
+                else:
+                    print(f"  ❌ Empty transcript for {vid_id} via {client_name}")
+            except Exception as e2:
+                print(f"  ❌ Innertube {client_config.get('clientName','?')} failed for {vid_id}: {type(e2).__name__}: {e2}")
 
         self._json_ok({"transcript": None})
 
