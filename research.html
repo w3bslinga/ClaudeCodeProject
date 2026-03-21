@@ -890,42 +890,6 @@
       if (e.key === 'Enter') { e.preventDefault(); doResearch(); }
     });
 
-    // Fetch transcript for a single video client-side via YouTube's page
-    async function fetchTranscript(videoId) {
-      try {
-        // Use a CORS proxy or direct fetch to get YouTube page
-        const pageResp = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
-        const pageHtml = await pageResp.text();
-        // Extract caption track URL
-        const match = pageHtml.match(/"captionTracks":\[.*?"baseUrl":"(.*?)"/);
-        if (!match) return null;
-        const capUrl = match[1].replace(/\\u0026/g, '&');
-        const capResp = await fetch(capUrl);
-        const capXml = await capResp.text();
-        // Parse XML captions
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(capXml, 'text/xml');
-        const texts = [...doc.querySelectorAll('text')].map(el => el.textContent).filter(Boolean);
-        return texts.join(' ').substring(0, 15000);
-      } catch (e) {
-        console.warn(`Transcript fetch failed for ${videoId}:`, e);
-        return null;
-      }
-    }
-
-    // Fetch transcript via server-side proxy (fallback for CORS issues)
-    async function fetchTranscriptViaProxy(videoId) {
-      try {
-        const res = await fetch(`${API_BASE}/transcript?v=${videoId}`);
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data.transcript || null;
-      } catch (e) {
-        console.warn(`Proxy transcript failed for ${videoId}:`, e);
-        return null;
-      }
-    }
-
     async function doResearch() {
       const topic = topicInput.value.trim();
       if (!topic) return;
@@ -937,79 +901,24 @@
       fireballBtn.classList.remove('visible');
 
       try {
-        // Step 1: Search YouTube (server-side)
-        const searchRes = await fetch(`${API_BASE}/research`, {
+        const res = await fetch(`${API_BASE}/research`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ topic, maxVideos: 8 })
+          body: JSON.stringify({ topic, maxVideos: 5 })
         });
-        const searchData = await searchRes.json();
-        if (!searchRes.ok) throw new Error(searchData.error || 'Search failed');
 
-        const videos = searchData.videos || [];
-        if (videos.length === 0) {
-          resultsContainer.innerHTML = '<p class="no-results">No videos found for this topic. Try a different search.</p>';
-          resultsTopic.textContent = topic;
-          resultsSection.hidden = false;
-          return;
-        }
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Research failed');
 
-        // Step 2: Fetch transcripts client-side (in parallel)
-        const transcriptPromises = videos.map(async (v) => {
-          const transcript = await fetchTranscriptViaProxy(v.videoId);
-          return { ...v, transcript };
-        });
-        const videosWithTranscripts = await Promise.all(transcriptPromises);
-
-        // Filter to only videos with transcripts, sort by views, limit to 5
-        const validVideos = videosWithTranscripts
-          .filter(v => v.transcript && v.transcript.length > 50)
-          .sort((a, b) => b.views - a.views)
-          .slice(0, 5);
-
-        if (validVideos.length === 0) {
-          resultsContainer.innerHTML = `<p class="no-results">No videos with transcripts found. Try a different search.<br><small style="color:#888">(${videos.length} videos found but none had available transcripts)</small></p>`;
-          resultsTopic.textContent = topic;
-          resultsSection.hidden = false;
-          return;
-        }
-
-        // Step 3: Summarize with Claude (server-side)
-        const sumRes = await fetch(`${API_BASE}/summarize`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            videos: validVideos.map(v => ({
-              videoId: v.videoId,
-              title: v.title,
-              transcript: v.transcript
-            }))
-          })
-        });
-        const sumData = await sumRes.json();
-
-        // Merge summaries back into video objects
-        const summaryMap = {};
-        if (sumData.summaries) {
-          for (const s of sumData.summaries) {
-            summaryMap[s.videoId] = s.bullets;
-          }
-        }
-
-        lastResults = validVideos.map(v => ({
-          videoId: v.videoId,
-          title: v.title,
-          thumbnail: v.thumbnail,
-          link: v.link,
-          channel: v.channel,
-          duration: v.duration,
-          views: v.views,
-          hasTranscript: true,
-          bullets: summaryMap[v.videoId] || []
-        }));
+        lastResults = data.results || [];
         lastTopic = topic;
 
-        renderResults(lastResults);
+        if (lastResults.length === 0) {
+          resultsContainer.innerHTML = '<p class="no-results">No videos found for this topic. Try a different search.</p>';
+        } else {
+          renderResults(lastResults);
+        }
+
         resultsTopic.textContent = topic;
         resultsSection.hidden = false;
         if (lastResults.length > 0) fireballBtn.classList.add('visible');

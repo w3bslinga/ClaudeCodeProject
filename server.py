@@ -419,12 +419,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self._json_ok({"transcript": None})
 
     def _handle_research(self):
-        """Step 1: Search YouTube, return video metadata (no transcripts - done client-side)."""
+        """Search YouTube, fetch transcripts (or descriptions as fallback), summarize with Claude."""
         try:
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length))
         except Exception:
             self._json_error(400, "Invalid request body")
+            return
+
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            self._json_error(401, "ANTHROPIC_API_KEY is not set.")
             return
 
         yt_key = os.environ.get("YOUTUBE_API_KEY", "")
@@ -433,7 +438,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
 
         topic = body.get("topic", "").strip()
-        fetch_count = min(body.get("maxVideos", 8), 8)
+        max_results = min(body.get("maxVideos", 5), 5)
+        fetch_count = min(max_results * 2, 8)
 
         if not topic:
             self._json_error(400, "No topic provided")
@@ -453,7 +459,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         items = search_resp.get("items", [])
         print(f"  🔍 YouTube search for '{topic}': {len(items)} results")
         if not items:
-            self._json_ok({"videos": []})
+            self._json_ok({"results": []})
             return
 
         # Extract video metadata
@@ -465,32 +471,191 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             videos.append({
                 "videoId": vid_id,
                 "title": snippet.get("title", ""),
+                "description": snippet.get("description", ""),
                 "thumbnail": snippet.get("thumbnails", {}).get("medium", {}).get("url", ""),
                 "link": f"https://www.youtube.com/watch?v={vid_id}",
                 "channel": snippet.get("channelTitle", ""),
                 "duration": "",
                 "views": 0,
+                "hasTranscript": False,
+                "bullets": [],
             })
             video_ids.append(vid_id)
 
-        # 2. Fetch video durations and view counts
+        # 2. Fetch video durations, view counts, and FULL descriptions
         try:
             details_resp = youtube.videos().list(
-                part="contentDetails,statistics", id=",".join(video_ids)
+                part="contentDetails,statistics,snippet", id=",".join(video_ids)
             ).execute()
             duration_map = {}
             views_map = {}
+            desc_map = {}
             for d in details_resp.get("items", []):
                 raw = d["contentDetails"]["duration"]
                 duration_map[d["id"]] = self._parse_duration(raw)
                 views_map[d["id"]] = int(d.get("statistics", {}).get("viewCount", 0))
+                desc_map[d["id"]] = d.get("snippet", {}).get("description", "")
             for v in videos:
                 v["duration"] = duration_map.get(v["videoId"], "")
                 v["views"] = views_map.get(v["videoId"], 0)
+                full_desc = desc_map.get(v["videoId"], "")
+                if full_desc:
+                    v["description"] = full_desc
         except Exception:
             pass
 
-        self._json_ok({"videos": videos})
+        # 3. Try to fetch transcripts (works locally, may fail on datacenter IPs)
+        transcripts = {}
+        yt_transcript = YouTubeTranscriptApi()
+        for vid_id in video_ids:
+            # Try yt-dlp first
+            try:
+                url = f"https://www.youtube.com/watch?v={vid_id}"
+                ydl_opts = {
+                    "writesubtitles": True,
+                    "writeautomaticsub": True,
+                    "subtitleslangs": ["en", "en-US", "en-GB"],
+                    "subtitlesformat": "json3",
+                    "skip_download": True,
+                    "quiet": True,
+                    "no_warnings": True,
+                }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    subs = info.get("subtitles", {})
+                    auto_subs = info.get("automatic_captions", {})
+                    sub_data = None
+                    for lang in ["en", "en-US", "en-GB"]:
+                        if lang in subs:
+                            sub_data = subs[lang]
+                            break
+                    if not sub_data:
+                        for lang in ["en", "en-US", "en-GB", "en-orig"]:
+                            if lang in auto_subs:
+                                sub_data = auto_subs[lang]
+                                break
+                    if sub_data:
+                        sub_url = None
+                        for fmt in sub_data:
+                            if fmt.get("ext") == "json3":
+                                sub_url = fmt.get("url")
+                                break
+                        if not sub_url and sub_data:
+                            sub_url = sub_data[0].get("url")
+                        if sub_url:
+                            sub_req = urllib.request.Request(sub_url, headers={
+                                "User-Agent": "Mozilla/5.0",
+                            })
+                            with urllib.request.urlopen(sub_req, timeout=15) as sr:
+                                sub_content = sr.read().decode("utf-8", errors="replace")
+                            try:
+                                sub_json = json.loads(sub_content)
+                                segments = []
+                                for event in sub_json.get("events", []):
+                                    for seg in event.get("segs", []):
+                                        t = seg.get("utf8", "").strip()
+                                        if t and t != "\n":
+                                            segments.append(t)
+                                text = " ".join(segments)
+                            except (json.JSONDecodeError, KeyError):
+                                import re as _re
+                                lines = sub_content.split("\n")
+                                text_lines = [_re.sub(r"<[^>]+>", "", l.strip()) for l in lines
+                                              if l.strip() and not l.startswith("WEBVTT") and "-->" not in l]
+                                text = " ".join(text_lines)
+                            if text.strip():
+                                transcripts[vid_id] = text[:15000]
+                                print(f"  ✅ Transcript for {vid_id} via yt-dlp ({len(text)} chars)")
+                                continue
+            except Exception as e:
+                print(f"  ⚠️ yt-dlp failed for {vid_id}: {type(e).__name__}: {e}")
+
+            # Try youtube-transcript-api
+            try:
+                result = yt_transcript.fetch(vid_id)
+                text = " ".join(s.text for s in result.snippets)
+                if text.strip():
+                    transcripts[vid_id] = text[:15000]
+                    print(f"  ✅ Transcript for {vid_id} via API ({len(text)} chars)")
+                    continue
+            except Exception as e:
+                print(f"  ⚠️ transcript-api failed for {vid_id}: {type(e).__name__}: {e}")
+
+        # Mark which have transcripts
+        for v in videos:
+            if v["videoId"] in transcripts:
+                v["hasTranscript"] = True
+
+        transcript_count = len(transcripts)
+        print(f"  📊 {len(videos)} videos, {transcript_count} with transcripts")
+
+        # Sort by views, take top results
+        videos.sort(key=lambda v: v["views"], reverse=True)
+        videos = videos[:max_results]
+
+        # 4. Summarize with Claude - use transcripts where available, descriptions as fallback
+        prompt_parts = []
+        for v in videos:
+            vid_id = v["videoId"]
+            if vid_id in transcripts:
+                source = f"Transcript:\n{transcripts[vid_id]}"
+            else:
+                desc = v.get("description", "")
+                source = f"Video Description:\n{desc}" if desc else "No transcript or description available."
+            prompt_parts.append(f'Video (id: {vid_id}): "{v["title"]}" by {v["channel"]}\n{source}')
+
+        user_prompt = (
+            "Summarize each of the following YouTube videos into 5-8 concise bullet points "
+            "capturing the key insights and facts. Keep each bullet under 2 sentences. "
+            "If only a description is provided (no transcript), do your best to summarize "
+            "the likely content based on the title, channel, and description.\n\n"
+            "Return ONLY a JSON array with objects like: "
+            '[{"videoId": "...", "bullets": ["...", ...]}]\n\n'
+            + "\n\n---\n\n".join(prompt_parts)
+        )
+
+        payload = {
+            "model": CLAUDE_MODEL,
+            "max_tokens": 4096,
+            "system": "You are a research assistant. Return only valid JSON, no markdown fences.",
+            "messages": [{"role": "user", "content": user_prompt}],
+        }
+
+        req = urllib.request.Request(
+            CLAUDE_API_URL,
+            data=json.dumps(payload).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+            },
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                result = json.loads(resp.read())
+                text_resp = result["content"][0]["text"].strip()
+                if text_resp.startswith("```"):
+                    text_resp = text_resp.split("\n", 1)[1]
+                    if text_resp.endswith("```"):
+                        text_resp = text_resp[:-3]
+                summaries = json.loads(text_resp.strip())
+                summary_map = {s["videoId"]: s["bullets"] for s in summaries}
+                for v in videos:
+                    if v["videoId"] in summary_map:
+                        v["bullets"] = summary_map[v["videoId"]]
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode()
+            print(f"  ⚠️ Summarization HTTP error {e.code}: {err_body[:500]}")
+        except Exception as e:
+            print(f"  ⚠️ Summarization error: {type(e).__name__}: {e}")
+
+        # Remove internal description field before sending to client
+        for v in videos:
+            v.pop("description", None)
+
+        self._json_ok({"results": videos, "transcriptCount": transcript_count})
 
     def _handle_summarize(self):
         """Step 2: Receive transcripts from client, summarize with Claude."""
