@@ -883,6 +883,7 @@
 
     let lastResults = [];
     let lastTopic = '';
+    let cachedSuperSummary = null; // cache so it doesn't regenerate on each click
     const fireballBtn = document.getElementById('fireball-btn');
 
     searchBtn.addEventListener('click', doResearch);
@@ -899,6 +900,7 @@
       errorSection.hidden = true;
       searchBtn.disabled = true;
       fireballBtn.classList.remove('visible');
+      cachedSuperSummary = null; // clear cache for new search
 
       try {
         const res = await fetch(`${API_BASE}/research`, {
@@ -1034,8 +1036,15 @@
     const superModalClose = document.getElementById('super-modal-close');
 
     async function openSuperSummary() {
-      superModalContent.innerHTML = '<div class="super-modal-loading"><div class="spinner"></div><p class="loading-text">Generating super summary...</p></div>';
       superModal.classList.add('open');
+
+      // Return cached summary if available
+      if (cachedSuperSummary) {
+        superModalContent.textContent = cachedSuperSummary;
+        return;
+      }
+
+      superModalContent.innerHTML = '<div class="super-modal-loading"><div class="spinner"></div><p class="loading-text">Generating super summary...</p></div>';
 
       try {
         const res = await fetch(`${API_BASE}/super-summary`, {
@@ -1045,7 +1054,8 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Summary failed');
-        superModalContent.textContent = data.summary;
+        cachedSuperSummary = data.summary; // cache the result
+        superModalContent.textContent = cachedSuperSummary;
       } catch (err) {
         superModalContent.innerHTML = `<p style="color:var(--error);">${escHtml(err.message)}</p>`;
       }
