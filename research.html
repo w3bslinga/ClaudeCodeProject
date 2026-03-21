@@ -797,8 +797,8 @@
     <div id="loading-section" hidden>
       <div class="loading-section">
         <div class="spinner"></div>
-        <p class="loading-text">Searching videos and generating summaries...</p>
-        <p class="loading-sub">This may take 15-30 seconds</p>
+        <p class="loading-text" id="loading-text">Searching videos and generating summaries...</p>
+        <p class="loading-sub" id="loading-sub">This may take 15-30 seconds</p>
       </div>
     </div>
 
@@ -966,6 +966,17 @@
       fireballBtn.classList.remove('visible');
       cachedSuperSummary = null;
       isYouTubeLink = isYouTubeUrl(topic);
+
+      // Update loading message based on input type
+      const loadingText = document.getElementById('loading-text');
+      const loadingSub = document.getElementById('loading-sub');
+      if (isYouTubeLink) {
+        loadingText.textContent = 'Generating summary...';
+        loadingSub.textContent = 'This may take 10-15 seconds';
+      } else {
+        loadingText.textContent = 'Searching videos and generating summaries...';
+        loadingSub.textContent = 'This may take 15-30 seconds';
+      }
 
       try {
         let endpoint, body;
