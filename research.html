@@ -777,13 +777,13 @@
       </div>
       <h1>Video Research Center</h1>
       <p style="font-style:italic; font-size:0.85rem; margin-top:0.25rem;"><span class="rainbow-text">Powered by Claude Opus 4.6</span></p>
-      <p class="subtitle">Enter a topic to discover and summarize YouTube videos</p>
+      <p class="subtitle">Summarize YouTube videos by topic or link</p>
     </div>
 
     <!-- Search form (sticky) -->
     <div class="search-sticky">
       <div class="search-section">
-        <input type="text" class="search-input" id="topic-input" placeholder="e.g. quantum computing basics" autocomplete="off" />
+        <input type="text" class="search-input" id="topic-input" placeholder="" autocomplete="off" />
         <button class="search-btn" id="search-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -884,7 +884,71 @@
     let lastResults = [];
     let lastTopic = '';
     let cachedSuperSummary = null; // cache so it doesn't regenerate on each click
+    let isYouTubeLink = false; // track if current search is a direct link
     const fireballBtn = document.getElementById('fireball-btn');
+
+    // ── Animated typing placeholder ──
+    const placeholderTexts = [
+      'e.g. quantum computing basics',
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+    ];
+    let phIndex = 0, charIndex = 0, isDeleting = false, animationPaused = false;
+    const TYPE_SPEED = 60, DELETE_SPEED = 35, PAUSE_AFTER_TYPE = 2000, PAUSE_AFTER_DELETE = 400;
+
+    function animatePlaceholder() {
+      if (animationPaused) return;
+      const current = placeholderTexts[phIndex];
+
+      if (!isDeleting) {
+        topicInput.placeholder = current.substring(0, charIndex + 1);
+        charIndex++;
+        if (charIndex === current.length) {
+          setTimeout(() => { isDeleting = true; animatePlaceholder(); }, PAUSE_AFTER_TYPE);
+          return;
+        }
+        setTimeout(animatePlaceholder, TYPE_SPEED);
+      } else {
+        topicInput.placeholder = current.substring(0, charIndex - 1);
+        charIndex--;
+        if (charIndex === 0) {
+          isDeleting = false;
+          phIndex = (phIndex + 1) % placeholderTexts.length;
+          setTimeout(animatePlaceholder, PAUSE_AFTER_DELETE);
+          return;
+        }
+        setTimeout(animatePlaceholder, DELETE_SPEED);
+      }
+    }
+    animatePlaceholder();
+
+    // Pause animation and clear input on focus
+    topicInput.addEventListener('focus', () => {
+      animationPaused = true;
+      topicInput.placeholder = '';
+      if (topicInput.value === placeholderTexts[0] || topicInput.value === placeholderTexts[1]) {
+        topicInput.value = '';
+      }
+    });
+
+    // Resume animation on blur if input is empty
+    topicInput.addEventListener('blur', () => {
+      if (!topicInput.value.trim()) {
+        animationPaused = false;
+        charIndex = 0;
+        isDeleting = false;
+        animatePlaceholder();
+      }
+    });
+
+    // Detect YouTube link
+    function isYouTubeUrl(str) {
+      return /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[\w-]+/.test(str.trim());
+    }
+
+    function extractVideoId(url) {
+      const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([\w-]+)/);
+      return m ? m[1] : null;
+    }
 
     searchBtn.addEventListener('click', doResearch);
     topicInput.addEventListener('keydown', (e) => {
@@ -900,30 +964,44 @@
       errorSection.hidden = true;
       searchBtn.disabled = true;
       fireballBtn.classList.remove('visible');
-      cachedSuperSummary = null; // clear cache for new search
+      cachedSuperSummary = null;
+      isYouTubeLink = isYouTubeUrl(topic);
 
       try {
-        const res = await fetch(`${API_BASE}/research`, {
+        let endpoint, body;
+
+        if (isYouTubeLink) {
+          const videoId = extractVideoId(topic);
+          if (!videoId) throw new Error('Could not parse YouTube video ID from that link.');
+          endpoint = `${API_BASE}/research`;
+          body = JSON.stringify({ videoId, maxVideos: 1 });
+        } else {
+          endpoint = `${API_BASE}/research`;
+          body = JSON.stringify({ topic, maxVideos: 5 });
+        }
+
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ topic, maxVideos: 5 })
+          body
         });
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Research failed');
 
         lastResults = data.results || [];
-        lastTopic = topic;
+        lastTopic = isYouTubeLink ? (lastResults[0]?.title || topic) : topic;
 
         if (lastResults.length === 0) {
-          resultsContainer.innerHTML = '<p class="no-results">No videos found for this topic. Try a different search.</p>';
+          resultsContainer.innerHTML = '<p class="no-results">No videos found. Try a different search.</p>';
         } else {
           renderResults(lastResults);
         }
 
-        resultsTopic.textContent = topic;
+        resultsTopic.textContent = lastTopic;
         resultsSection.hidden = false;
-        if (lastResults.length > 0) fireballBtn.classList.add('visible');
+        // Only show fireball for topic searches (multiple videos), not single link
+        if (lastResults.length > 1 && !isYouTubeLink) fireballBtn.classList.add('visible');
         resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       } catch (err) {
         errorMsg.textContent = err.message;

@@ -438,71 +438,104 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
 
         topic = body.get("topic", "").strip()
+        direct_video_id = body.get("videoId", "").strip()
         max_results = min(body.get("maxVideos", 5), 5)
         fetch_count = min(max_results * 2, 8)
 
-        if not topic:
-            self._json_error(400, "No topic provided")
+        if not topic and not direct_video_id:
+            self._json_error(400, "No topic or videoId provided")
             return
 
-        # 1. Search YouTube via Data API v3
-        try:
-            youtube = yt_build("youtube", "v3", developerKey=yt_key)
-            search_resp = youtube.search().list(
-                q=topic, part="snippet", type="video",
-                maxResults=fetch_count, relevanceLanguage="en"
-            ).execute()
-        except Exception as e:
-            self._json_error(502, f"YouTube search failed: {e}")
-            return
+        youtube = yt_build("youtube", "v3", developerKey=yt_key)
 
-        items = search_resp.get("items", [])
-        print(f"  🔍 YouTube search for '{topic}': {len(items)} results")
-        if not items:
-            self._json_ok({"results": []})
-            return
+        # Direct YouTube link mode: skip search, use video ID directly
+        if direct_video_id:
+            print(f"  🔗 Direct video lookup: {direct_video_id}")
+            video_ids = [direct_video_id]
+            # Fetch video snippet to get title, channel, thumbnail
+            try:
+                vid_resp = youtube.videos().list(
+                    part="snippet,contentDetails,statistics", id=direct_video_id
+                ).execute()
+                vid_items = vid_resp.get("items", [])
+                if not vid_items:
+                    self._json_ok({"results": []})
+                    return
+                d = vid_items[0]
+                snippet = d["snippet"]
+                videos = [{
+                    "videoId": direct_video_id,
+                    "title": snippet.get("title", ""),
+                    "description": snippet.get("description", ""),
+                    "thumbnail": snippet.get("thumbnails", {}).get("medium", {}).get("url", ""),
+                    "link": f"https://www.youtube.com/watch?v={direct_video_id}",
+                    "channel": snippet.get("channelTitle", ""),
+                    "duration": self._parse_duration(d["contentDetails"]["duration"]),
+                    "views": int(d.get("statistics", {}).get("viewCount", 0)),
+                    "hasTranscript": False,
+                    "bullets": [],
+                }]
+            except Exception as e:
+                self._json_error(502, f"YouTube video lookup failed: {e}")
+                return
+        else:
+            # 1. Search YouTube via Data API v3
+            try:
+                search_resp = youtube.search().list(
+                    q=topic, part="snippet", type="video",
+                    maxResults=fetch_count, relevanceLanguage="en"
+                ).execute()
+            except Exception as e:
+                self._json_error(502, f"YouTube search failed: {e}")
+                return
 
-        # Extract video metadata
-        videos = []
-        video_ids = []
-        for item in items:
-            vid_id = item["id"]["videoId"]
-            snippet = item["snippet"]
-            videos.append({
-                "videoId": vid_id,
-                "title": snippet.get("title", ""),
-                "description": snippet.get("description", ""),
-                "thumbnail": snippet.get("thumbnails", {}).get("medium", {}).get("url", ""),
-                "link": f"https://www.youtube.com/watch?v={vid_id}",
-                "channel": snippet.get("channelTitle", ""),
-                "duration": "",
-                "views": 0,
-                "hasTranscript": False,
-                "bullets": [],
-            })
-            video_ids.append(vid_id)
+            items = search_resp.get("items", [])
+            print(f"  🔍 YouTube search for '{topic}': {len(items)} results")
+            if not items:
+                self._json_ok({"results": []})
+                return
 
-        # 2. Fetch video durations, view counts, and FULL descriptions
-        try:
-            details_resp = youtube.videos().list(
-                part="contentDetails,statistics,snippet", id=",".join(video_ids)
-            ).execute()
-            duration_map = {}
-            views_map = {}
-            desc_map = {}
-            for d in details_resp.get("items", []):
-                raw = d["contentDetails"]["duration"]
-                duration_map[d["id"]] = self._parse_duration(raw)
-                views_map[d["id"]] = int(d.get("statistics", {}).get("viewCount", 0))
-                desc_map[d["id"]] = d.get("snippet", {}).get("description", "")
-            for v in videos:
-                v["duration"] = duration_map.get(v["videoId"], "")
-                v["views"] = views_map.get(v["videoId"], 0)
-                full_desc = desc_map.get(v["videoId"], "")
-                if full_desc:
-                    v["description"] = full_desc
-        except Exception:
-            pass
+            # Extract video metadata
+            videos = []
+            video_ids = []
+            for item in items:
+                vid_id = item["id"]["videoId"]
+                snippet = item["snippet"]
+                videos.append({
+                    "videoId": vid_id,
+                    "title": snippet.get("title", ""),
+                    "description": snippet.get("description", ""),
+                    "thumbnail": snippet.get("thumbnails", {}).get("medium", {}).get("url", ""),
+                    "link": f"https://www.youtube.com/watch?v={vid_id}",
+                    "channel": snippet.get("channelTitle", ""),
+                    "duration": "",
+                    "views": 0,
+                    "hasTranscript": False,
+                    "bullets": [],
+                })
+                video_ids.append(vid_id)
+
+            # 2. Fetch video durations, view counts, and FULL descriptions
+            try:
+                details_resp = youtube.videos().list(
+                    part="contentDetails,statistics,snippet", id=",".join(video_ids)
+                ).execute()
+                duration_map = {}
+                views_map = {}
+                desc_map = {}
+                for d in details_resp.get("items", []):
+                    raw = d["contentDetails"]["duration"]
+                    duration_map[d["id"]] = self._parse_duration(raw)
+                    views_map[d["id"]] = int(d.get("statistics", {}).get("viewCount", 0))
+                    desc_map[d["id"]] = d.get("snippet", {}).get("description", "")
+                for v in videos:
+                    v["duration"] = duration_map.get(v["videoId"], "")
+                    v["views"] = views_map.get(v["videoId"], 0)
+                    full_desc = desc_map.get(v["videoId"], "")
+                    if full_desc:
+                        v["description"] = full_desc
+            except Exception:
+                pass
 
         # 3. Try to fetch transcripts (works locally, may fail on datacenter IPs)
         transcripts = {}
