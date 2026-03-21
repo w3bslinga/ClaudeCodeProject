@@ -914,7 +914,8 @@
         lastTopic = topic;
 
         if (lastResults.length === 0) {
-          resultsContainer.innerHTML = '<p class="no-results">No videos found for this topic. Try a different search.</p>';
+          const debugInfo = data.debug ? `<br><small style="color:#888">(Debug: ${data.debug})</small>` : '';
+          resultsContainer.innerHTML = `<p class="no-results">No videos found for this topic. Try a different search.${debugInfo}</p>`;
         } else {
           renderResults(lastResults);
         }

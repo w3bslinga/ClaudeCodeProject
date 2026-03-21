@@ -283,8 +283,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
 
         items = search_resp.get("items", [])
+        print(f"  🔍 YouTube search for '{topic}': {len(items)} results")
         if not items:
-            self._json_ok({"results": []})
+            self._json_ok({"results": [], "debug": "YouTube returned 0 search results"})
             return
 
         # Extract video metadata
@@ -332,8 +333,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 text = " ".join(s.text for s in result.snippets)
                 # Truncate to ~15k chars
                 transcripts[vid_id] = text[:15000]
-            except Exception:
-                pass  # no transcript available
+                print(f"  ✅ Transcript fetched for {vid_id} ({len(text)} chars)")
+            except Exception as e:
+                print(f"  ❌ No transcript for {vid_id}: {type(e).__name__}: {e}")
 
         # Mark which have transcripts
         for v in videos:
@@ -396,11 +398,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 print(f"  ⚠️ Summarization error: {type(e).__name__}: {e}")
 
         # Filter to only videos with transcripts, sort by views descending, cap at max_results
+        total_found = len(videos)
+        with_transcripts = len([v for v in videos if v["hasTranscript"]])
+        print(f"  📊 {total_found} videos found, {with_transcripts} with transcripts, {len(transcripts)} transcripts fetched")
         videos = [v for v in videos if v["hasTranscript"]]
         videos.sort(key=lambda v: v["views"], reverse=True)
         videos = videos[:max_results]
 
-        self._json_ok({"results": videos})
+        self._json_ok({"results": videos, "debug": f"{total_found} found, {with_transcripts} with transcripts"})
 
     def _handle_super_summary(self):
         try:
