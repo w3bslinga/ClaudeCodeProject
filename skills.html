@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skills Zone — Alwin Thomas</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f9f8;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #0a66c2;
+      --accent-hover: #0854a5;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.07);
+      --toggle-bg: #e5e7eb;
+      --toggle-hover: #d1d5db;
+      --drop-bg: #f0f6ff;
+      --drop-border: #93c5fd;
+      --success: #16a34a;
+      --error: #dc2626;
+      --tag-bg: #eff6ff;
+      --tag-text: #1d4ed8;
+    }
+    [data-theme="dark"] {
+      --bg: #111111;
+      --surface: #1c1c1c;
+      --text: #f0ede8;
+      --muted: #9ca3af;
+      --border: #2e2e2e;
+      --shadow: 0 4px 24px rgba(0,0,0,0.45);
+      --toggle-bg: #2e2e2e;
+      --toggle-hover: #3a3a3a;
+      --drop-bg: #1a2233;
+      --drop-border: #3b82f6;
+      --tag-bg: #1e3a5f;
+      --tag-text: #93c5fd;
+    }
+
+    html { transition: background 0.2s, color 0.2s; overflow-x: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 4rem;
+      line-height: 1.6;
+      transition: background 0.2s, color 0.2s;
+      overflow-x: hidden;
+      width: 100%;
+    }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      position: fixed;
+      top: 1.1rem;
+      right: 1.1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: var(--toggle-bg);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, transform 0.1s;
+      z-index: 100;
+    }
+    .theme-toggle:hover { background: var(--toggle-hover); }
+    .theme-toggle:active { transform: scale(0.92); }
+    .theme-toggle .icon-sun,
+    .theme-toggle .icon-moon {
+      position: absolute;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .theme-toggle .icon-moon { opacity: 0; transform: rotate(-30deg) scale(0.8); }
+    [data-theme="dark"] .theme-toggle .icon-sun { opacity: 0; transform: rotate(30deg) scale(0.8); }
+    [data-theme="dark"] .theme-toggle .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+    /* ── Navigation (hamburger + home) ── */
+    .home-btn {
+      position: fixed;
+      top: 1.1rem;
+      left: 1.1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: var(--text);
+      background: rgba(255,255,255,0.25);
+      border: 1.5px solid var(--border);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    }
+    [data-theme="dark"] .home-btn {
+      background: rgba(30,30,30,0.45);
+    }
+    .home-btn:hover {
+      transform: scale(1.07);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    }
+
+    .hamburger {
+      position: fixed;
+      top: 3.8rem;
+      left: 1.1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: var(--toggle-bg);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+      z-index: 200;
+    }
+    .hamburger:hover { background: var(--toggle-hover); }
+
+    .nav-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 300;
+    }
+    .nav-overlay.open { display: block; }
+
+    .nav-drawer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 260px;
+      height: 100%;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+      transform: translateX(-100%);
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+      z-index: 400;
+      display: flex;
+      flex-direction: column;
+      padding: 1.25rem 1rem;
+    }
+    .nav-drawer.open { transform: translateX(0); }
+
+    .nav-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .nav-drawer-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .nav-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .nav-close:hover { background: var(--toggle-bg); }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover {
+      background: var(--toggle-bg);
+      color: var(--accent);
+    }
+
+    /* ── Rainbow text ── */
+    @keyframes rainbowShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .rainbow-text {
+      background: linear-gradient(90deg, #f97316, #eab308, #22c55e, #3b82f6, #a855f7, #ec4899, #f97316);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      animation: rainbowShift 4s ease infinite;
+      font-weight: 500;
+    }
+
+    /* ── Page content ── */
+    .page-wrap {
+      max-width: 680px;
+      width: 100%;
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    .page-title {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.25rem;
+    }
+    .page-powered {
+      font-style: italic;
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
+    .page-subtitle {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+      margin-bottom: 2.5rem;
+    }
+
+    /* ── Skill grid ── */
+    .skill-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .skill-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2rem 1.5rem;
+      text-decoration: none;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: transform 0.2s, box-shadow 0.3s;
+      border: 1.5px solid var(--border);
+    }
+    .skill-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 32px rgba(99,102,241,0.25);
+    }
+    [data-theme="dark"] .skill-card:hover {
+      box-shadow: 0 8px 32px rgba(129,140,248,0.3);
+    }
+
+    .skill-icon {
+      width: 72px;
+      height: 72px;
+      margin-bottom: 1.25rem;
+      color: var(--accent);
+      transition: transform 0.3s ease;
+    }
+    .skill-card:hover .skill-icon {
+      animation: iconBounce 0.5s ease;
+    }
+    @keyframes iconBounce {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      25% { transform: translateY(-6px) rotate(-3deg); }
+      50% { transform: translateY(-2px) rotate(2deg); }
+      75% { transform: translateY(-4px) rotate(-1deg); }
+    }
+
+    .skill-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    .skill-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .skill-grid {
+        grid-template-columns: 1fr;
+      }
+      .page-title { font-size: 1.5rem; }
+    }
+
+    /* ── Star cursor + particle trail ── */
+    * { cursor: none !important; }
+    #star-cursor {
+      position: fixed; width: 22px; height: 22px;
+      pointer-events: none; z-index: 99999;
+      transform: translate(-50%, -50%); will-change: left, top;
+    }
+    #star-cursor svg { width: 100%; height: 100%; filter: drop-shadow(0 0 4px rgba(99,102,241,0.6)); }
+    [data-theme="dark"] #star-cursor svg { filter: drop-shadow(0 0 5px rgba(129,140,248,0.9)); }
+    @keyframes starSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    #star-cursor.spinning { animation: starSpin 0.6s linear infinite; }
+    .trail-particle {
+      position: fixed; border-radius: 50%; pointer-events: none; z-index: 9998;
+      animation: trailFade 0.5s ease-out forwards;
+    }
+    @keyframes trailFade {
+      0%   { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0;    transform: translate(-50%, calc(-50% - 18px)) scale(0.2); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Home button -->
+  <a class="home-btn" href="index.html" aria-label="Go to home">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+  </a>
+
+  <!-- Hamburger -->
+  <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Nav drawer -->
+  <div class="nav-overlay" id="nav-overlay"></div>
+  <nav class="nav-drawer" id="nav-drawer" aria-hidden="true">
+    <div class="nav-drawer-header">
+      <span class="nav-drawer-title">Pages</span>
+      <button class="nav-close" id="nav-close" aria-label="Close menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <ul class="nav-list">
+      <li><a class="nav-item" href="index.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Home
+      </a></li>
+      <li><a class="nav-item" href="sudoku.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
+        </svg>
+        Sudoku
+      </a></li>
+      <li><a class="nav-item" href="music.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+        </svg>
+        Mood Radio
+      </a></li>
+      <li><a class="nav-item" href="image-analyzer.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        Image Analyzer
+      </a></li>
+      <li><a class="nav-item" href="research.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Video Research Center
+      </a></li>
+      <li><a class="nav-item" href="skills.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        Skills Zone
+      </a></li>
+      <li><a class="nav-item" href="architecture.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/>
+        </svg>
+        Architecture
+      </a></li>
+    </ul>
+  </nav>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  </button>
+
+  <div class="page-wrap">
+    <h1 class="page-title">Skills Zone</h1>
+    <p class="page-powered"><span class="rainbow-text">Powered by Claude Opus 4.6</span></p>
+    <p class="page-subtitle">AI-powered tools at your fingertips</p>
+
+    <div class="skill-grid">
+      <!-- ELI5 -->
+      <a class="skill-card" href="eli5.html">
+        <svg class="skill-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="24" r="14" stroke="currentColor" stroke-width="2.5" fill="none"/>
+          <circle cx="26" cy="21" r="2" fill="currentColor"/>
+          <circle cx="38" cy="21" r="2" fill="currentColor"/>
+          <path d="M25 28c0 0 3 5 7 5s7-5 7-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M18 14c-2-4 0-10 5-11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M46 14c2-4 0-10-5-11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M22 38c-4 2-8 6-8 12v6h36v-6c0-6-4-10-8-12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        </svg>
+        <span class="skill-name">Explain Like I'm 5</span>
+        <span class="skill-desc">Turn complex topics into simple explanations</span>
+      </a>
+
+      <!-- Prompt Engineer -->
+      <a class="skill-card" href="prompt-engineer.html">
+        <svg class="skill-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="30" r="12" stroke="currentColor" stroke-width="2.5" fill="none"/>
+          <circle cx="28" cy="28" r="1.5" fill="currentColor"/>
+          <circle cx="36" cy="28" r="1.5" fill="currentColor"/>
+          <path d="M28 33c0 0 2 3 4 3s4-3 4-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M20 20 L20 12 L44 12 L44 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <rect x="18" y="8" width="28" height="5" rx="2" stroke="currentColor" stroke-width="2.5" fill="none"/>
+          <path d="M24 42c-3 2-6 5-6 10v4h28v-4c0-5-3-8-6-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        </svg>
+        <span class="skill-name">Prompt Engineer</span>
+        <span class="skill-desc">Transform rough prompts into expert-level prompts</span>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // ── Navigation ─────────────────────────────────────────────────
+    const hamburgerBtn = document.getElementById('hamburger');
+    const navDrawer    = document.getElementById('nav-drawer');
+    const navOverlay   = document.getElementById('nav-overlay');
+    const navClose     = document.getElementById('nav-close');
+
+    function openNav() { navDrawer.classList.add('open'); navOverlay.classList.add('open'); hamburgerBtn.setAttribute('aria-expanded','true'); navDrawer.setAttribute('aria-hidden','false'); }
+    function closeNav() { navDrawer.classList.remove('open'); navOverlay.classList.remove('open'); hamburgerBtn.setAttribute('aria-expanded','false'); navDrawer.setAttribute('aria-hidden','true'); }
+    hamburgerBtn.addEventListener('click', openNav);
+    navClose.addEventListener('click', closeNav);
+    navOverlay.addEventListener('click', closeNav);
+
+    // ── Theme ──────────────────────────────────────────────────────
+    const root = document.documentElement;
+    const toggleBtn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme', 'dark');
+    toggleBtn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+
+    // ── Star cursor + Particle trail ──────────────────────────
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      const darkColors  = ['#818cf8','#38bdf8','#34d399','#f472b6','#fb923c'];
+      const lightColors = ['#6366f1','#0ea5e9','#10b981','#ec4899','#f97316'];
+      const star = document.createElement('div');
+      star.id = 'star-cursor';
+      star.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z"
+          fill="#6366f1" stroke="#6366f1" stroke-width="0.5" stroke-linejoin="round"/></svg>`;
+      document.body.appendChild(star);
+      let spinTimer = null;
+      document.addEventListener('mousemove', (e) => {
+        star.style.left = e.clientX + 'px';
+        star.style.top  = e.clientY + 'px';
+        star.classList.add('spinning');
+        clearTimeout(spinTimer);
+        spinTimer = setTimeout(() => star.classList.remove('spinning'), 150);
+      });
+      document.addEventListener('mouseleave', () => star.style.opacity = '0');
+      document.addEventListener('mouseenter', () => star.style.opacity = '1');
+      let lastX = -999, lastY = -999;
+      document.addEventListener('mousemove', (e) => {
+        const dx = e.clientX - lastX, dy = e.clientY - lastY;
+        if (Math.sqrt(dx*dx + dy*dy) < 12) return;
+        lastX = e.clientX; lastY = e.clientY;
+        const isDark = root.getAttribute('data-theme') === 'dark';
+        const colors = isDark ? darkColors : lightColors;
+        const dot = document.createElement('div');
+        dot.className = 'trail-particle';
+        const size = Math.random() * 6 + 4;
+        dot.style.cssText = `width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};left:${e.clientX}px;top:${e.clientY}px;opacity:${isDark?0.85:0.7}`;
+        document.body.appendChild(dot);
+        dot.addEventListener('animationend', () => dot.remove());
+      });
+    }
+  </script>
+</body>
+</html>

@@ -74,6 +74,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self._handle_summarize()
         elif self.path == "/super-summary":
             self._handle_super_summary()
+        elif self.path == "/eli5":
+            self._handle_eli5()
+        elif self.path == "/prompt-engineer":
+            self._handle_prompt_engineer()
         else:
             self.send_error(404)
 
@@ -851,6 +855,171 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if h:
             return f"{h}:{mi:02d}:{s:02d}"
         return f"{mi}:{s:02d}"
+
+    def _handle_eli5(self):
+        """Explain Like I'm 5 — initial explanation or follow-up chat."""
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+        except Exception:
+            self._json_error(400, "Invalid request body")
+            return
+
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            self._json_error(401, "ANTHROPIC_API_KEY is not set.")
+            return
+
+        topic = body.get("topic", "").strip()
+        messages = body.get("messages", [])
+        prompt = body.get("prompt", "").strip()
+
+        # Initial request needs a topic; follow-ups need a prompt
+        if not topic and not prompt:
+            self._json_error(400, "No topic or prompt provided")
+            return
+
+        system_prompt = (
+            "You are explaining complex topics to a 5-year-old child. "
+            "Use simple words, fun analogies, and short sentences. Be enthusiastic and encouraging. "
+            "Avoid jargon entirely. Use examples a child would understand like toys, animals, food, and games.\n\n"
+            "If the user asks something inappropriate, offensive, or sexual, respond with: "
+            "\"Oops! That's not something we can talk about. Let's pick a fun topic instead! "
+            "How about asking me about dinosaurs, space, or rainbows?\"\n\n"
+            "When giving the INITIAL explanation, provide TWO versions clearly separated:\n"
+            "First write a section starting with '=== SIMPLE ===' that gives a very simple 2-4 sentence "
+            "explanation a 5-year-old would understand.\n"
+            "Then write a section starting with '=== DETAILED ===' that gives a richer explanation with "
+            "bullet points, bold text (using **bold**), and fun analogies — still simple but more thorough.\n\n"
+            "For FOLLOW-UP questions, respond naturally in a simple, child-friendly way "
+            "without the === sections."
+        )
+
+        # Build API messages
+        api_messages = []
+        if messages:
+            for msg in messages:
+                api_messages.append({"role": msg["role"], "content": msg["content"]})
+            if prompt:
+                api_messages.append({"role": "user", "content": prompt})
+        else:
+            api_messages.append({"role": "user", "content": f"Explain this topic: {topic}"})
+
+        payload = {
+            "model": CLAUDE_MODEL,
+            "max_tokens": 1024,
+            "system": system_prompt,
+            "messages": api_messages,
+        }
+
+        req = urllib.request.Request(
+            CLAUDE_API_URL,
+            data=json.dumps(payload).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+            },
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                result = json.loads(resp.read())
+                text = result["content"][0]["text"]
+                self._json_ok({"result": text})
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode()
+            try:
+                err_json = json.loads(err_body)
+                msg = err_json.get("error", {}).get("message", err_body)
+            except Exception:
+                msg = err_body
+            self._json_error(e.code, msg)
+        except Exception as e:
+            self._json_error(500, str(e))
+
+    def _handle_prompt_engineer(self):
+        """Rewrite a rough prompt into an expert-level prompt, with optional refinement."""
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+        except Exception:
+            self._json_error(400, "Invalid request body")
+            return
+
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            self._json_error(401, "ANTHROPIC_API_KEY is not set.")
+            return
+
+        prompt = body.get("prompt", "").strip()
+        engineered = body.get("engineered", "").strip()
+        refinement = body.get("refinement", "").strip()
+
+        if not prompt:
+            self._json_error(400, "No prompt provided")
+            return
+
+        system_prompt = (
+            "You are an expert prompt engineer. Your job is to take rough, vague, or poorly structured "
+            "prompts and transform them into clear, effective, well-structured prompts that get the best "
+            "results from AI language models.\n\n"
+            "If the user's prompt is inappropriate, offensive, or sexual, respond with: "
+            "\"I can't help engineer that kind of prompt. Please provide a constructive prompt "
+            "that I can help improve.\"\n\n"
+            "When rewriting, you should:\n"
+            "- Add specificity and context where helpful\n"
+            "- Include clear constraints and output format instructions\n"
+            "- Add a persona or role if appropriate\n"
+            "- Structure it logically with sections if needed\n"
+            "- Keep it concise but comprehensive\n\n"
+            "Return ONLY the improved prompt text. No explanations, no commentary, no markdown fences."
+        )
+
+        api_messages = []
+        if refinement and engineered:
+            # Refinement request
+            api_messages.append({"role": "user", "content": f"Here is my rough prompt:\n\n{prompt}"})
+            api_messages.append({"role": "assistant", "content": engineered})
+            api_messages.append({"role": "user", "content": f"Please refine the engineered prompt with this instruction: {refinement}"})
+        else:
+            # Initial request
+            api_messages.append({"role": "user", "content": f"Please engineer this prompt into a professional, effective prompt:\n\n{prompt}"})
+
+        payload = {
+            "model": CLAUDE_MODEL,
+            "max_tokens": 2048,
+            "system": system_prompt,
+            "messages": api_messages,
+        }
+
+        req = urllib.request.Request(
+            CLAUDE_API_URL,
+            data=json.dumps(payload).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+            },
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                result = json.loads(resp.read())
+                text = result["content"][0]["text"]
+                self._json_ok({"result": text})
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode()
+            try:
+                err_json = json.loads(err_body)
+                msg = err_json.get("error", {}).get("message", err_body)
+            except Exception:
+                msg = err_body
+            self._json_error(e.code, msg)
+        except Exception as e:
+            self._json_error(500, str(e))
 
     def _json_ok(self, data):
         body = json.dumps(data).encode()

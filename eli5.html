@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Explain Like I'm 5 — Alwin Thomas</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f9f8;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #0a66c2;
+      --accent-hover: #0854a5;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.07);
+      --toggle-bg: #e5e7eb;
+      --toggle-hover: #d1d5db;
+      --drop-bg: #f0f6ff;
+      --drop-border: #93c5fd;
+      --success: #16a34a;
+      --error: #dc2626;
+      --tag-bg: #eff6ff;
+      --tag-text: #1d4ed8;
+    }
+    [data-theme="dark"] {
+      --bg: #111111;
+      --surface: #1c1c1c;
+      --text: #f0ede8;
+      --muted: #9ca3af;
+      --border: #2e2e2e;
+      --shadow: 0 4px 24px rgba(0,0,0,0.45);
+      --toggle-bg: #2e2e2e;
+      --toggle-hover: #3a3a3a;
+      --drop-bg: #1a2233;
+      --drop-border: #3b82f6;
+      --tag-bg: #1e3a5f;
+      --tag-text: #93c5fd;
+    }
+
+    html { transition: background 0.2s, color 0.2s; overflow-x: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 4rem;
+      line-height: 1.6;
+      transition: background 0.2s, color 0.2s;
+      overflow-x: hidden;
+      width: 100%;
+    }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      position: fixed; top: 1.1rem; right: 1.1rem;
+      width: 38px; height: 38px; border-radius: 50%; border: none;
+      background: var(--toggle-bg); color: var(--text); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, transform 0.1s; z-index: 100;
+    }
+    .theme-toggle:hover { background: var(--toggle-hover); }
+    .theme-toggle:active { transform: scale(0.92); }
+    .theme-toggle .icon-sun, .theme-toggle .icon-moon {
+      position: absolute; transition: opacity 0.2s, transform 0.2s;
+    }
+    .theme-toggle .icon-moon { opacity: 0; transform: rotate(-30deg) scale(0.8); }
+    [data-theme="dark"] .theme-toggle .icon-sun { opacity: 0; transform: rotate(30deg) scale(0.8); }
+    [data-theme="dark"] .theme-toggle .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+    /* ── Navigation ── */
+    .home-btn {
+      position: fixed; top: 1.1rem; left: 1.1rem;
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none; color: var(--text);
+      background: rgba(255,255,255,0.25); border: 1.5px solid var(--border);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+      z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    }
+    [data-theme="dark"] .home-btn { background: rgba(30,30,30,0.45); }
+    .home-btn:hover { transform: scale(1.07); box-shadow: 0 4px 16px rgba(0,0,0,0.18); }
+
+    .hamburger {
+      position: fixed; top: 3.8rem; left: 1.1rem;
+      width: 38px; height: 38px; border-radius: 50%; border: none;
+      background: var(--toggle-bg); color: var(--text); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s; z-index: 200;
+    }
+    .hamburger:hover { background: var(--toggle-hover); }
+
+    .nav-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; }
+    .nav-overlay.open { display: block; }
+    .nav-drawer {
+      position: fixed; top: 0; left: 0; width: 260px; height: 100%;
+      background: var(--surface); border-right: 1px solid var(--border);
+      box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+      transform: translateX(-100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+      z-index: 400; display: flex; flex-direction: column; padding: 1.25rem 1rem;
+    }
+    .nav-drawer.open { transform: translateX(0); }
+    .nav-drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .nav-drawer-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .nav-close {
+      width: 32px; height: 32px; border-radius: 8px; border: none;
+      background: transparent; color: var(--text); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+    }
+    .nav-close:hover { background: var(--toggle-bg); }
+    .nav-list { list-style: none; display: flex; flex-direction: column; gap: 0.25rem; }
+    .nav-item {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.6rem 0.75rem; border-radius: 8px; text-decoration: none;
+      font-size: 0.92rem; font-weight: 500; color: var(--text);
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover { background: var(--toggle-bg); color: var(--accent); }
+
+    /* ── Rainbow text ── */
+    @keyframes rainbowShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .rainbow-text {
+      background: linear-gradient(90deg, #f97316, #eab308, #22c55e, #3b82f6, #a855f7, #ec4899, #f97316);
+      background-size: 300% 100%;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: rainbowShift 4s ease infinite; font-weight: 500;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 2.5rem 2rem;
+      max-width: 720px; width: 100%; margin-top: 1rem;
+    }
+    .card-header {
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; margin-bottom: 2rem;
+    }
+    .icon-wrap {
+      width: 56px; height: 56px; background: var(--drop-bg);
+      border-radius: 14px; display: flex; align-items: center;
+      justify-content: center; margin-bottom: 1rem;
+    }
+    .icon-wrap svg { color: var(--accent); }
+    h1 { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.3rem; }
+    .subtitle { font-size: 0.9rem; color: var(--muted); }
+
+    /* ── Input section ── */
+    .input-section {
+      display: flex; gap: 0.75rem; margin-bottom: 1.5rem;
+    }
+    .topic-input {
+      flex: 1; padding: 0.7rem 1rem;
+      border: 2px solid var(--border); border-radius: 10px;
+      background: var(--bg); color: var(--text);
+      font-size: 0.95rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .topic-input:focus { border-color: var(--accent); }
+    .topic-input::placeholder { color: var(--muted); }
+    .explain-btn {
+      padding: 0.7rem 1.4rem; border: none; border-radius: 10px;
+      background: var(--accent); color: #fff;
+      font-size: 0.92rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .explain-btn:hover { background: var(--accent-hover); }
+    .explain-btn:active { transform: scale(0.97); }
+    .explain-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.35); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0;
+      display: inline-block; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Loading ── */
+    .loading-section {
+      text-align: center; padding: 2rem 0; display: none;
+    }
+    .loading-section.visible { display: block; }
+    .loading-spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    /* ── Results ── */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .results-section { display: none; animation: fadeIn 0.3s ease; }
+    .results-section.visible { display: block; }
+
+    .divider { width: 100%; height: 1px; background: var(--border); margin: 1.5rem 0 1.25rem; }
+
+    .results-label {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.75rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .results-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .results-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    }
+
+    .result-box {
+      background: var(--bg); border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.1rem;
+    }
+    .result-box-title {
+      font-size: 0.82rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.5rem;
+    }
+    .result-box-content {
+      font-size: 0.925rem; color: var(--text); line-height: 1.75;
+      white-space: pre-wrap;
+    }
+    .result-box-content ul {
+      margin: 0.5rem 0; padding-left: 1.25rem;
+    }
+    .result-box-content li {
+      margin-bottom: 0.3rem;
+    }
+
+    .result-error {
+      font-size: 0.9rem; color: var(--error);
+      background: #fef2f2; border: 1.5px solid #fecaca;
+      border-radius: 10px; padding: 0.85rem 1rem;
+    }
+    [data-theme="dark"] .result-error { background: #2d1515; border-color: #7f1d1d; }
+
+    /* ── Chat section ── */
+    .chat-section { display: none; margin-top: 1.5rem; animation: fadeIn 0.3s ease; }
+    .chat-section.visible { display: block; }
+
+    .chat-messages {
+      max-height: 400px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 0.6rem; padding: 0.5rem 0;
+    }
+    .chat-bubble {
+      max-width: 85%; padding: 0.65rem 0.9rem;
+      border-radius: 12px; font-size: 0.88rem;
+      line-height: 1.6; word-wrap: break-word; white-space: pre-wrap;
+    }
+    .chat-bubble.user {
+      align-self: flex-end; background: var(--accent);
+      color: #fff; border-bottom-right-radius: 4px;
+    }
+    .chat-bubble.assistant {
+      align-self: flex-start; background: var(--bg);
+      color: var(--text); border: 1.5px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .chat-bubble.typing {
+      align-self: flex-start; background: var(--bg);
+      border: 1.5px solid var(--border); color: var(--muted); font-style: italic;
+    }
+
+    .chat-input-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: flex-end; }
+    .chat-input {
+      flex: 1; padding: 0.6rem 0.85rem;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      background: var(--bg); color: var(--text);
+      font-size: 0.88rem; font-family: inherit;
+      resize: none; outline: none; transition: border-color 0.15s;
+      min-height: 40px; max-height: 80px;
+    }
+    .chat-input:focus { border-color: var(--accent); }
+    .chat-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .chat-send-btn {
+      padding: 0.6rem 1rem; border: none; border-radius: 10px;
+      background: var(--accent); color: #fff;
+      font-size: 0.88rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: background 0.15s, opacity 0.15s; white-space: nowrap;
+    }
+    .chat-send-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .chat-send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .chat-counter {
+      text-align: center; font-size: 0.72rem;
+      color: var(--muted); margin-top: 0.5rem;
+    }
+
+    .try-new-btn {
+      display: none; align-items: center; justify-content: center;
+      gap: 0.5rem; width: 100%; padding: 0.75rem; margin-top: 1rem;
+      border: 2px solid var(--accent); border-radius: 10px;
+      background: transparent; color: var(--accent);
+      font-size: 0.95rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .try-new-btn.visible { display: flex; }
+    .try-new-btn:hover { background: var(--accent); color: #fff; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .card { padding: 1.75rem 1rem; }
+      h1 { font-size: 1.25rem; }
+      .results-grid { grid-template-columns: 1fr; }
+      .input-section { flex-direction: column; }
+    }
+
+    /* ── Star cursor + particle trail ── */
+    * { cursor: none !important; }
+    #star-cursor {
+      position: fixed; width: 22px; height: 22px;
+      pointer-events: none; z-index: 99999;
+      transform: translate(-50%, -50%); will-change: left, top;
+    }
+    #star-cursor svg { width: 100%; height: 100%; filter: drop-shadow(0 0 4px rgba(99,102,241,0.6)); }
+    [data-theme="dark"] #star-cursor svg { filter: drop-shadow(0 0 5px rgba(129,140,248,0.9)); }
+    @keyframes starSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    #star-cursor.spinning { animation: starSpin 0.6s linear infinite; }
+    .trail-particle {
+      position: fixed; border-radius: 50%; pointer-events: none; z-index: 9998;
+      animation: trailFade 0.5s ease-out forwards;
+    }
+    @keyframes trailFade {
+      0%   { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0;    transform: translate(-50%, calc(-50% - 18px)) scale(0.2); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Home button -->
+  <a class="home-btn" href="index.html" aria-label="Go to home">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+  </a>
+
+  <!-- Hamburger -->
+  <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Nav drawer -->
+  <div class="nav-overlay" id="nav-overlay"></div>
+  <nav class="nav-drawer" id="nav-drawer" aria-hidden="true">
+    <div class="nav-drawer-header">
+      <span class="nav-drawer-title">Pages</span>
+      <button class="nav-close" id="nav-close" aria-label="Close menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <ul class="nav-list">
+      <li><a class="nav-item" href="index.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Home
+      </a></li>
+      <li><a class="nav-item" href="sudoku.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+        Sudoku
+      </a></li>
+      <li><a class="nav-item" href="music.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        Mood Radio
+      </a></li>
+      <li><a class="nav-item" href="image-analyzer.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Image Analyzer
+      </a></li>
+      <li><a class="nav-item" href="research.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Video Research Center
+      </a></li>
+      <li><a class="nav-item" href="skills.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Skills Zone
+      </a></li>
+      <li><a class="nav-item" href="architecture.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/></svg>
+        Architecture
+      </a></li>
+    </ul>
+  </nav>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  </button>
+
+  <main class="card">
+    <!-- Header -->
+    <div class="card-header">
+      <div class="icon-wrap">
+        <svg width="28" height="28" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <circle cx="32" cy="24" r="12"/>
+          <circle cx="27" cy="22" r="1.5" fill="currentColor" stroke="none"/>
+          <circle cx="37" cy="22" r="1.5" fill="currentColor" stroke="none"/>
+          <path d="M26 28c0 0 3 4 6 4s6-4 6-4"/>
+        </svg>
+      </div>
+      <h1>Explain Like I'm 5</h1>
+      <p style="font-style:italic; font-size:0.85rem; margin-top:0.25rem;"><span class="rainbow-text">Powered by Claude Opus 4.6</span></p>
+      <p class="subtitle">Enter any topic and get a simple + detailed explanation</p>
+    </div>
+
+    <!-- Input -->
+    <div class="input-section">
+      <input type="text" class="topic-input" id="topic-input" placeholder="e.g. Quantum computing, Blockchain, Photosynthesis..." autocomplete="off" />
+      <button class="explain-btn" id="explain-btn">Explain!</button>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-section" id="loading-section">
+      <div class="loading-spinner"></div>
+      <p style="font-size:0.95rem; font-weight:500;">Explaining...</p>
+      <p style="font-size:0.8rem; color:var(--muted); margin-top:0.25rem;">Making it simple enough for a 5-year-old</p>
+    </div>
+
+    <!-- Results -->
+    <div class="results-section" id="results-section">
+      <div class="divider"></div>
+      <p class="results-label">Explanation</p>
+      <div class="results-grid" id="results-grid">
+        <div class="result-box">
+          <div class="result-box-title">Simple Explanation</div>
+          <div class="result-box-content" id="simple-result"></div>
+        </div>
+        <div class="result-box">
+          <div class="result-box-title">Detailed Breakdown</div>
+          <div class="result-box-content" id="detailed-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat follow-up -->
+    <div class="chat-section" id="chat-section">
+      <div class="divider"></div>
+      <p class="results-label">Follow-up Questions</p>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row" id="chat-input-row">
+        <input type="text" class="chat-input" id="chat-input" placeholder="Ask a follow-up question..." autocomplete="off" />
+        <button class="chat-send-btn" id="chat-send-btn">Send</button>
+      </div>
+      <p class="chat-counter" id="chat-counter"></p>
+    </div>
+
+    <!-- Try new topic button -->
+    <button class="try-new-btn" id="try-new-btn">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Try New Topic
+    </button>
+  </main>
+
+  <script>
+    // ── API base ────────────────────────────────────────────────
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:8788'
+      : 'https://claudecodeproject.onrender.com';
+
+    // ── Navigation ─────────────────────────────────────────────────
+    const hamburgerBtn = document.getElementById('hamburger');
+    const navDrawer    = document.getElementById('nav-drawer');
+    const navOverlay   = document.getElementById('nav-overlay');
+    const navClose     = document.getElementById('nav-close');
+
+    function openNav() { navDrawer.classList.add('open'); navOverlay.classList.add('open'); hamburgerBtn.setAttribute('aria-expanded','true'); navDrawer.setAttribute('aria-hidden','false'); }
+    function closeNav() { navDrawer.classList.remove('open'); navOverlay.classList.remove('open'); hamburgerBtn.setAttribute('aria-expanded','false'); navDrawer.setAttribute('aria-hidden','true'); }
+    hamburgerBtn.addEventListener('click', openNav);
+    navClose.addEventListener('click', closeNav);
+    navOverlay.addEventListener('click', closeNav);
+
+    // ── Theme ──────────────────────────────────────────────────────
+    const root = document.documentElement;
+    const toggleBtn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme', 'dark');
+    toggleBtn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+
+    // ── DOM refs ────────────────────────────────────────────────
+    const topicInput     = document.getElementById('topic-input');
+    const explainBtn     = document.getElementById('explain-btn');
+    const loadingSection = document.getElementById('loading-section');
+    const resultsSection = document.getElementById('results-section');
+    const simpleResult   = document.getElementById('simple-result');
+    const detailedResult = document.getElementById('detailed-result');
+    const chatSection    = document.getElementById('chat-section');
+    const chatMessages   = document.getElementById('chat-messages');
+    const chatInput      = document.getElementById('chat-input');
+    const chatSendBtn    = document.getElementById('chat-send-btn');
+    const chatCounter    = document.getElementById('chat-counter');
+    const tryNewBtn      = document.getElementById('try-new-btn');
+
+    let chatHistory   = [];
+    let questionCount = 0;
+    const MAX_QUESTIONS = 10;
+    let currentTopic = '';
+
+    // ── Explain ─────────────────────────────────────────────────
+    explainBtn.addEventListener('click', explain);
+    topicInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); explain(); }
+    });
+
+    async function explain() {
+      const topic = topicInput.value.trim();
+      if (!topic) return;
+
+      currentTopic = topic;
+      explainBtn.disabled = true;
+      explainBtn.innerHTML = '<div class="spinner"></div> Explaining...';
+      loadingSection.classList.add('visible');
+      resultsSection.classList.remove('visible');
+      chatSection.classList.remove('visible');
+      tryNewBtn.classList.remove('visible');
+
+      try {
+        const res = await fetch(`${API_BASE}/eli5`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Explanation failed');
+
+        showResults(data);
+      } catch (err) {
+        simpleResult.innerHTML = `<div class="result-error">${escHtml(err.message)}</div>`;
+        detailedResult.innerHTML = '';
+        resultsSection.classList.add('visible');
+      } finally {
+        loadingSection.classList.remove('visible');
+        explainBtn.disabled = false;
+        explainBtn.textContent = 'Explain!';
+      }
+    }
+
+    function showResults(data) {
+      const simple = data.simple || data.result || '';
+      const detailed = data.detailed || '';
+
+      simpleResult.textContent = simple;
+
+      // Parse detailed for rich formatting (bold, bullets)
+      if (detailed) {
+        detailedResult.innerHTML = formatDetailed(detailed);
+      } else {
+        detailedResult.textContent = 'No detailed breakdown available.';
+      }
+
+      resultsSection.classList.add('visible');
+
+      // Initialize chat
+      chatHistory = [
+        { role: 'user', content: `Explain "${currentTopic}" like I'm 5.` },
+        { role: 'assistant', content: `Simple: ${simple}\n\nDetailed: ${detailed}` }
+      ];
+      questionCount = 0;
+      chatMessages.innerHTML = '';
+      chatInput.disabled = false;
+      chatSendBtn.disabled = false;
+      chatInput.value = '';
+      chatCounter.textContent = '';
+      tryNewBtn.classList.remove('visible');
+      chatSection.classList.add('visible');
+
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function formatDetailed(text) {
+      // Convert **bold** to <strong>
+      let html = escHtml(text);
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      // Convert lines starting with - or * to bullet lists
+      const lines = html.split('\n');
+      let result = '';
+      let inList = false;
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (/^[-*]\s/.test(trimmed)) {
+          if (!inList) { result += '<ul>'; inList = true; }
+          result += `<li>${trimmed.replace(/^[-*]\s/, '')}</li>`;
+        } else {
+          if (inList) { result += '</ul>'; inList = false; }
+          result += (trimmed ? `<p>${trimmed}</p>` : '');
+        }
+      }
+      if (inList) result += '</ul>';
+      return result;
+    }
+
+    // ── Chat logic ────────────────────────────────────────────────
+    function updateCounter() {
+      chatCounter.textContent = `Question ${questionCount} of ${MAX_QUESTIONS}`;
+    }
+
+    function addBubble(role, text) {
+      const div = document.createElement('div');
+      div.className = `chat-bubble ${role}`;
+      div.textContent = text;
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return div;
+    }
+
+    async function sendChat() {
+      const prompt = chatInput.value.trim();
+      if (!prompt || questionCount >= MAX_QUESTIONS) return;
+
+      questionCount++;
+      updateCounter();
+
+      addBubble('user', prompt);
+      chatInput.value = '';
+      chatInput.disabled = true;
+      chatSendBtn.disabled = true;
+
+      const typing = addBubble('typing', 'Thinking...');
+
+      try {
+        const res = await fetch(`${API_BASE}/eli5`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topic: currentTopic,
+            messages: chatHistory,
+            followUp: prompt
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Chat failed');
+
+        typing.remove();
+
+        let answer = data.simple || data.result || '';
+
+        chatHistory.push({ role: 'user', content: prompt });
+        chatHistory.push({ role: 'assistant', content: answer });
+
+        if (questionCount === MAX_QUESTIONS - 1) {
+          answer += '\n\nThis has been so much fun... I\'ll take one more question, and then I have to run! [hey that rhymed :)]';
+        }
+
+        addBubble('assistant', answer);
+
+        if (questionCount >= MAX_QUESTIONS) {
+          chatInput.disabled = true;
+          chatSendBtn.disabled = true;
+          chatInput.placeholder = 'Chat limit reached';
+          tryNewBtn.classList.add('visible');
+          tryNewBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          chatInput.disabled = false;
+          chatSendBtn.disabled = false;
+          chatInput.focus();
+        }
+      } catch (err) {
+        typing.remove();
+        addBubble('assistant', err.message);
+        chatInput.disabled = false;
+        chatSendBtn.disabled = false;
+      }
+    }
+
+    chatSendBtn.addEventListener('click', sendChat);
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+    });
+
+    tryNewBtn.addEventListener('click', () => {
+      topicInput.value = '';
+      resultsSection.classList.remove('visible');
+      chatSection.classList.remove('visible');
+      tryNewBtn.classList.remove('visible');
+      chatMessages.innerHTML = '';
+      chatHistory = [];
+      questionCount = 0;
+      chatInput.placeholder = 'Ask a follow-up question...';
+      chatInput.disabled = false;
+      chatSendBtn.disabled = false;
+      topicInput.focus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Star cursor + Particle trail ──────────────────────────
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      const darkColors  = ['#818cf8','#38bdf8','#34d399','#f472b6','#fb923c'];
+      const lightColors = ['#6366f1','#0ea5e9','#10b981','#ec4899','#f97316'];
+      const star = document.createElement('div');
+      star.id = 'star-cursor';
+      star.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z"
+          fill="#6366f1" stroke="#6366f1" stroke-width="0.5" stroke-linejoin="round"/></svg>`;
+      document.body.appendChild(star);
+      let spinTimer = null;
+      document.addEventListener('mousemove', (e) => {
+        star.style.left = e.clientX + 'px';
+        star.style.top  = e.clientY + 'px';
+        star.classList.add('spinning');
+        clearTimeout(spinTimer);
+        spinTimer = setTimeout(() => star.classList.remove('spinning'), 150);
+      });
+      document.addEventListener('mouseleave', () => star.style.opacity = '0');
+      document.addEventListener('mouseenter', () => star.style.opacity = '1');
+      let lastX = -999, lastY = -999;
+      document.addEventListener('mousemove', (e) => {
+        const dx = e.clientX - lastX, dy = e.clientY - lastY;
+        if (Math.sqrt(dx*dx + dy*dy) < 12) return;
+        lastX = e.clientX; lastY = e.clientY;
+        const isDark = root.getAttribute('data-theme') === 'dark';
+        const colors = isDark ? darkColors : lightColors;
+        const dot = document.createElement('div');
+        dot.className = 'trail-particle';
+        const size = Math.random() * 6 + 4;
+        dot.style.cssText = `width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};left:${e.clientX}px;top:${e.clientY}px;opacity:${isDark?0.85:0.7}`;
+        document.body.appendChild(dot);
+        dot.addEventListener('animationend', () => dot.remove());
+      });
+    }
+  </script>
+</body>
+</html>

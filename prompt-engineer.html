@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt Engineer — Alwin Thomas</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f9f8;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #0a66c2;
+      --accent-hover: #0854a5;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.07);
+      --toggle-bg: #e5e7eb;
+      --toggle-hover: #d1d5db;
+      --drop-bg: #f0f6ff;
+      --drop-border: #93c5fd;
+      --success: #16a34a;
+      --error: #dc2626;
+      --tag-bg: #eff6ff;
+      --tag-text: #1d4ed8;
+    }
+    [data-theme="dark"] {
+      --bg: #111111;
+      --surface: #1c1c1c;
+      --text: #f0ede8;
+      --muted: #9ca3af;
+      --border: #2e2e2e;
+      --shadow: 0 4px 24px rgba(0,0,0,0.45);
+      --toggle-bg: #2e2e2e;
+      --toggle-hover: #3a3a3a;
+      --drop-bg: #1a2233;
+      --drop-border: #3b82f6;
+      --tag-bg: #1e3a5f;
+      --tag-text: #93c5fd;
+    }
+
+    html { transition: background 0.2s, color 0.2s; overflow-x: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 4rem;
+      line-height: 1.6;
+      transition: background 0.2s, color 0.2s;
+      overflow-x: hidden;
+      width: 100%;
+    }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      position: fixed; top: 1.1rem; right: 1.1rem;
+      width: 38px; height: 38px; border-radius: 50%; border: none;
+      background: var(--toggle-bg); color: var(--text); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, transform 0.1s; z-index: 100;
+    }
+    .theme-toggle:hover { background: var(--toggle-hover); }
+    .theme-toggle:active { transform: scale(0.92); }
+    .theme-toggle .icon-sun, .theme-toggle .icon-moon {
+      position: absolute; transition: opacity 0.2s, transform 0.2s;
+    }
+    .theme-toggle .icon-moon { opacity: 0; transform: rotate(-30deg) scale(0.8); }
+    [data-theme="dark"] .theme-toggle .icon-sun { opacity: 0; transform: rotate(30deg) scale(0.8); }
+    [data-theme="dark"] .theme-toggle .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+    /* ── Navigation ── */
+    .home-btn {
+      position: fixed; top: 1.1rem; left: 1.1rem;
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none; color: var(--text);
+      background: rgba(255,255,255,0.25); border: 1.5px solid var(--border);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+      z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    }
+    [data-theme="dark"] .home-btn { background: rgba(30,30,30,0.45); }
+    .home-btn:hover { transform: scale(1.07); box-shadow: 0 4px 16px rgba(0,0,0,0.18); }
+
+    .hamburger {
+      position: fixed; top: 3.8rem; left: 1.1rem;
+      width: 38px; height: 38px; border-radius: 50%; border: none;
+      background: var(--toggle-bg); color: var(--text); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s; z-index: 200;
+    }
+    .hamburger:hover { background: var(--toggle-hover); }
+
+    .nav-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; }
+    .nav-overlay.open { display: block; }
+    .nav-drawer {
+      position: fixed; top: 0; left: 0; width: 260px; height: 100%;
+      background: var(--surface); border-right: 1px solid var(--border);
+      box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+      transform: translateX(-100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+      z-index: 400; display: flex; flex-direction: column; padding: 1.25rem 1rem;
+    }
+    .nav-drawer.open { transform: translateX(0); }
+    .nav-drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .nav-drawer-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .nav-close {
+      width: 32px; height: 32px; border-radius: 8px; border: none;
+      background: transparent; color: var(--text); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+    }
+    .nav-close:hover { background: var(--toggle-bg); }
+    .nav-list { list-style: none; display: flex; flex-direction: column; gap: 0.25rem; }
+    .nav-item {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.6rem 0.75rem; border-radius: 8px; text-decoration: none;
+      font-size: 0.92rem; font-weight: 500; color: var(--text);
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover { background: var(--toggle-bg); color: var(--accent); }
+
+    /* ── Rainbow text ── */
+    @keyframes rainbowShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .rainbow-text {
+      background: linear-gradient(90deg, #f97316, #eab308, #22c55e, #3b82f6, #a855f7, #ec4899, #f97316);
+      background-size: 300% 100%;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: rainbowShift 4s ease infinite; font-weight: 500;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 2.5rem 2rem;
+      max-width: 680px; width: 100%; margin-top: 1rem;
+    }
+    .card-header {
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; margin-bottom: 2rem;
+    }
+    .icon-wrap {
+      width: 56px; height: 56px; background: var(--drop-bg);
+      border-radius: 14px; display: flex; align-items: center;
+      justify-content: center; margin-bottom: 1rem;
+    }
+    .icon-wrap svg { color: var(--accent); }
+    h1 { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.3rem; }
+    .subtitle { font-size: 0.9rem; color: var(--muted); }
+
+    /* ── Textarea input ── */
+    .prompt-textarea {
+      width: 100%; min-height: 120px; max-height: 300px;
+      padding: 0.85rem 1rem; border: 2px solid var(--border);
+      border-radius: 10px; background: var(--bg); color: var(--text);
+      font-size: 0.95rem; font-family: inherit; outline: none;
+      resize: vertical; transition: border-color 0.2s; line-height: 1.6;
+    }
+    .prompt-textarea:focus { border-color: var(--accent); }
+    .prompt-textarea::placeholder { color: var(--muted); }
+
+    .word-counter {
+      text-align: right; font-size: 0.75rem; color: var(--muted);
+      margin-top: 0.35rem; transition: color 0.2s;
+    }
+    .word-counter.over-limit { color: var(--error); font-weight: 600; }
+
+    .engineer-btn {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5rem; width: 100%; padding: 0.75rem; margin-top: 1rem;
+      border: none; border-radius: 10px; background: var(--accent);
+      color: #fff; font-size: 0.95rem; font-weight: 600;
+      font-family: inherit; cursor: pointer;
+      transition: background 0.15s, opacity 0.15s, transform 0.1s;
+    }
+    .engineer-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .engineer-btn:active:not(:disabled) { transform: scale(0.98); }
+    .engineer-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.35); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      flex-shrink: 0; display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Loading ── */
+    .loading-section {
+      text-align: center; padding: 2rem 0; display: none;
+    }
+    .loading-section.visible { display: block; }
+    .loading-spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    /* ── Results ── */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .results-section { display: none; margin-top: 1.5rem; animation: fadeIn 0.3s ease; }
+    .results-section.visible { display: block; }
+
+    .divider { width: 100%; height: 1px; background: var(--border); margin: 1.5rem 0 1.25rem; }
+
+    .results-label {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.75rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .results-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .result-code {
+      font-size: 0.9rem; color: var(--text); line-height: 1.75;
+      white-space: pre-wrap; word-wrap: break-word;
+      background: var(--bg); border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 1.25rem 1.25rem;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+
+    .result-error {
+      font-size: 0.9rem; color: var(--error);
+      background: #fef2f2; border: 1.5px solid #fecaca;
+      border-radius: 10px; padding: 0.85rem 1rem;
+    }
+    [data-theme="dark"] .result-error { background: #2d1515; border-color: #7f1d1d; }
+
+    /* Copy button */
+    .copy-btn {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      margin-top: 0.75rem; padding: 0.4rem 0.85rem;
+      border: 1.5px solid var(--border); border-radius: 7px;
+      background: transparent; color: var(--muted);
+      font-size: 0.8rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: border-color 0.15s, color 0.15s;
+    }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-btn.copied { color: var(--success); border-color: var(--success); }
+
+    /* ── Refine section ── */
+    .refine-section {
+      display: none; margin-top: 1.25rem; animation: fadeIn 0.3s ease;
+    }
+    .refine-section.visible { display: block; }
+
+    .refine-row {
+      display: flex; gap: 0.5rem; align-items: flex-end;
+    }
+    .refine-input {
+      flex: 1; padding: 0.6rem 0.85rem;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      background: var(--bg); color: var(--text);
+      font-size: 0.88rem; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+    }
+    .refine-input:focus { border-color: var(--accent); }
+    .refine-input::placeholder { color: var(--muted); }
+    .refine-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .refine-btn {
+      padding: 0.6rem 1rem; border: none; border-radius: 10px;
+      background: var(--accent); color: #fff;
+      font-size: 0.88rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: background 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+    .refine-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .refine-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .refine-label {
+      font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem;
+    }
+
+    .refined-notice {
+      display: none; font-size: 0.82rem; color: var(--success);
+      margin-top: 0.5rem; font-weight: 500;
+    }
+    .refined-notice.visible { display: block; }
+
+    /* ── Responsive ── */
+    @media (max-width: 520px) {
+      .card { padding: 1.75rem 1rem; }
+      h1 { font-size: 1.25rem; }
+    }
+
+    /* ── Star cursor + particle trail ── */
+    * { cursor: none !important; }
+    #star-cursor {
+      position: fixed; width: 22px; height: 22px;
+      pointer-events: none; z-index: 99999;
+      transform: translate(-50%, -50%); will-change: left, top;
+    }
+    #star-cursor svg { width: 100%; height: 100%; filter: drop-shadow(0 0 4px rgba(99,102,241,0.6)); }
+    [data-theme="dark"] #star-cursor svg { filter: drop-shadow(0 0 5px rgba(129,140,248,0.9)); }
+    @keyframes starSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    #star-cursor.spinning { animation: starSpin 0.6s linear infinite; }
+    .trail-particle {
+      position: fixed; border-radius: 50%; pointer-events: none; z-index: 9998;
+      animation: trailFade 0.5s ease-out forwards;
+    }
+    @keyframes trailFade {
+      0%   { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0;    transform: translate(-50%, calc(-50% - 18px)) scale(0.2); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Home button -->
+  <a class="home-btn" href="index.html" aria-label="Go to home">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+  </a>
+
+  <!-- Hamburger -->
+  <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Nav drawer -->
+  <div class="nav-overlay" id="nav-overlay"></div>
+  <nav class="nav-drawer" id="nav-drawer" aria-hidden="true">
+    <div class="nav-drawer-header">
+      <span class="nav-drawer-title">Pages</span>
+      <button class="nav-close" id="nav-close" aria-label="Close menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <ul class="nav-list">
+      <li><a class="nav-item" href="index.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Home
+      </a></li>
+      <li><a class="nav-item" href="sudoku.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+        Sudoku
+      </a></li>
+      <li><a class="nav-item" href="music.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        Mood Radio
+      </a></li>
+      <li><a class="nav-item" href="image-analyzer.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Image Analyzer
+      </a></li>
+      <li><a class="nav-item" href="research.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Video Research Center
+      </a></li>
+      <li><a class="nav-item" href="skills.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Skills Zone
+      </a></li>
+      <li><a class="nav-item" href="architecture.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/></svg>
+        Architecture
+      </a></li>
+    </ul>
+  </nav>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  </button>
+
+  <main class="card">
+    <!-- Header -->
+    <div class="card-header">
+      <div class="icon-wrap">
+        <svg width="28" height="28" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <circle cx="32" cy="30" r="10"/>
+          <circle cx="28" cy="28" r="1.2" fill="currentColor" stroke="none"/>
+          <circle cx="36" cy="28" r="1.2" fill="currentColor" stroke="none"/>
+          <path d="M28 33c0 0 2 2.5 4 2.5s4-2.5 4-2.5"/>
+          <path d="M22 22 L22 16 L42 16 L42 22"/>
+          <rect x="20" y="12" width="24" height="5" rx="2"/>
+        </svg>
+      </div>
+      <h1>Prompt Engineer</h1>
+      <p style="font-style:italic; font-size:0.85rem; margin-top:0.25rem;"><span class="rainbow-text">Powered by Claude Opus 4.6</span></p>
+      <p class="subtitle">Transform rough prompts into expert-level prompts</p>
+    </div>
+
+    <!-- Input -->
+    <textarea class="prompt-textarea" id="prompt-textarea" placeholder="Enter your rough prompt here..." rows="5"></textarea>
+    <p class="word-counter" id="word-counter">0/250 words</p>
+
+    <button class="engineer-btn" id="engineer-btn">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+      </svg>
+      Engineer It!
+    </button>
+
+    <!-- Loading -->
+    <div class="loading-section" id="loading-section">
+      <div class="loading-spinner"></div>
+      <p style="font-size:0.95rem; font-weight:500;">Engineering your prompt...</p>
+      <p style="font-size:0.8rem; color:var(--muted); margin-top:0.25rem;">Crafting the perfect prompt</p>
+    </div>
+
+    <!-- Results -->
+    <div class="results-section" id="results-section">
+      <div class="divider"></div>
+      <p class="results-label">Engineered Prompt</p>
+      <div class="result-code" id="result-code"></div>
+      <button class="copy-btn" id="copy-btn" aria-label="Copy engineered prompt">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy
+      </button>
+
+      <!-- Refine -->
+      <div class="refine-section" id="refine-section">
+        <div class="divider"></div>
+        <p class="refine-label">Want to tweak it? Give one refinement instruction:</p>
+        <div class="refine-row">
+          <input type="text" class="refine-input" id="refine-input" placeholder='e.g. "make it shorter", "add a persona", "more formal"' autocomplete="off" />
+          <button class="refine-btn" id="refine-btn">Refine</button>
+        </div>
+        <p class="refined-notice" id="refined-notice">Prompt refined successfully!</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ── API base ────────────────────────────────────────────────
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:8788'
+      : 'https://claudecodeproject.onrender.com';
+
+    // ── Navigation ─────────────────────────────────────────────────
+    const hamburgerBtn = document.getElementById('hamburger');
+    const navDrawer    = document.getElementById('nav-drawer');
+    const navOverlay   = document.getElementById('nav-overlay');
+    const navClose     = document.getElementById('nav-close');
+
+    function openNav() { navDrawer.classList.add('open'); navOverlay.classList.add('open'); hamburgerBtn.setAttribute('aria-expanded','true'); navDrawer.setAttribute('aria-hidden','false'); }
+    function closeNav() { navDrawer.classList.remove('open'); navOverlay.classList.remove('open'); hamburgerBtn.setAttribute('aria-expanded','false'); navDrawer.setAttribute('aria-hidden','true'); }
+    hamburgerBtn.addEventListener('click', openNav);
+    navClose.addEventListener('click', closeNav);
+    navOverlay.addEventListener('click', closeNav);
+
+    // ── Theme ──────────────────────────────────────────────────────
+    const root = document.documentElement;
+    const toggleBtn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme', 'dark');
+    toggleBtn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+
+    // ── DOM refs ────────────────────────────────────────────────
+    const promptTextarea = document.getElementById('prompt-textarea');
+    const wordCounter    = document.getElementById('word-counter');
+    const engineerBtn    = document.getElementById('engineer-btn');
+    const loadingSection = document.getElementById('loading-section');
+    const resultsSection = document.getElementById('results-section');
+    const resultCode     = document.getElementById('result-code');
+    const copyBtn        = document.getElementById('copy-btn');
+    const refineSection  = document.getElementById('refine-section');
+    const refineInput    = document.getElementById('refine-input');
+    const refineBtn      = document.getElementById('refine-btn');
+    const refinedNotice  = document.getElementById('refined-notice');
+
+    const WORD_LIMIT = 250;
+    let currentEngineeredPrompt = '';
+    let hasRefined = false;
+
+    // ── Word count ──────────────────────────────────────────────
+    function countWords(text) {
+      const trimmed = text.trim();
+      if (!trimmed) return 0;
+      return trimmed.split(/\s+/).length;
+    }
+
+    function updateWordCount() {
+      const count = countWords(promptTextarea.value);
+      wordCounter.textContent = `${count}/${WORD_LIMIT} words`;
+      if (count > WORD_LIMIT) {
+        wordCounter.classList.add('over-limit');
+        engineerBtn.disabled = true;
+      } else {
+        wordCounter.classList.remove('over-limit');
+        engineerBtn.disabled = false;
+      }
+    }
+
+    promptTextarea.addEventListener('input', updateWordCount);
+
+    // ── Engineer ────────────────────────────────────────────────
+    engineerBtn.addEventListener('click', engineerPrompt);
+
+    async function engineerPrompt() {
+      const rawPrompt = promptTextarea.value.trim();
+      if (!rawPrompt) return;
+      if (countWords(rawPrompt) > WORD_LIMIT) return;
+
+      engineerBtn.disabled = true;
+      engineerBtn.innerHTML = '<div class="spinner"></div> Engineering...';
+      loadingSection.classList.add('visible');
+      resultsSection.classList.remove('visible');
+
+      try {
+        const res = await fetch(`${API_BASE}/prompt-engineer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: rawPrompt })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Engineering failed');
+
+        currentEngineeredPrompt = data.result || data.engineered || '';
+        resultCode.textContent = currentEngineeredPrompt;
+        resultsSection.classList.add('visible');
+
+        // Show refine section
+        hasRefined = false;
+        refineInput.disabled = false;
+        refineBtn.disabled = false;
+        refineInput.value = '';
+        refinedNotice.classList.remove('visible');
+        refineSection.classList.add('visible');
+
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (err) {
+        resultCode.innerHTML = `<span style="color:var(--error)">${escHtml(err.message)}</span>`;
+        resultsSection.classList.add('visible');
+        refineSection.classList.remove('visible');
+      } finally {
+        loadingSection.classList.remove('visible');
+        engineerBtn.disabled = false;
+        engineerBtn.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Engineer It!`;
+        updateWordCount();
+      }
+    }
+
+    // ── Refine ──────────────────────────────────────────────────
+    refineBtn.addEventListener('click', refinePrompt);
+    refineInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); refinePrompt(); }
+    });
+
+    async function refinePrompt() {
+      const instruction = refineInput.value.trim();
+      if (!instruction || hasRefined) return;
+
+      refineBtn.disabled = true;
+      refineInput.disabled = true;
+      refineBtn.textContent = 'Refining...';
+
+      try {
+        const res = await fetch(`${API_BASE}/prompt-engineer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: currentEngineeredPrompt,
+            refine: instruction
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Refinement failed');
+
+        currentEngineeredPrompt = data.result || data.engineered || '';
+        resultCode.textContent = currentEngineeredPrompt;
+
+        hasRefined = true;
+        refineInput.disabled = true;
+        refineBtn.disabled = true;
+        refineBtn.textContent = 'Refined';
+        refinedNotice.classList.add('visible');
+      } catch (err) {
+        refinedNotice.textContent = err.message;
+        refinedNotice.style.color = 'var(--error)';
+        refinedNotice.classList.add('visible');
+        refineInput.disabled = false;
+        refineBtn.disabled = false;
+      } finally {
+        if (!hasRefined) refineBtn.textContent = 'Refine';
+      }
+    }
+
+    // ── Copy button ────────────────────────────────────────────
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(currentEngineeredPrompt).then(() => {
+        copyBtn.classList.add('copied');
+        copyBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+        setTimeout(() => {
+          copyBtn.classList.remove('copied');
+          copyBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
+        }, 2000);
+      });
+    });
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Star cursor + Particle trail ──────────────────────────
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      const darkColors  = ['#818cf8','#38bdf8','#34d399','#f472b6','#fb923c'];
+      const lightColors = ['#6366f1','#0ea5e9','#10b981','#ec4899','#f97316'];
+      const star = document.createElement('div');
+      star.id = 'star-cursor';
+      star.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z"
+          fill="#6366f1" stroke="#6366f1" stroke-width="0.5" stroke-linejoin="round"/></svg>`;
+      document.body.appendChild(star);
+      let spinTimer = null;
+      document.addEventListener('mousemove', (e) => {
+        star.style.left = e.clientX + 'px';
+        star.style.top  = e.clientY + 'px';
+        star.classList.add('spinning');
+        clearTimeout(spinTimer);
+        spinTimer = setTimeout(() => star.classList.remove('spinning'), 150);
+      });
+      document.addEventListener('mouseleave', () => star.style.opacity = '0');
+      document.addEventListener('mouseenter', () => star.style.opacity = '1');
+      let lastX = -999, lastY = -999;
+      document.addEventListener('mousemove', (e) => {
+        const dx = e.clientX - lastX, dy = e.clientY - lastY;
+        if (Math.sqrt(dx*dx + dy*dy) < 12) return;
+        lastX = e.clientX; lastY = e.clientY;
+        const isDark = root.getAttribute('data-theme') === 'dark';
+        const colors = isDark ? darkColors : lightColors;
+        const dot = document.createElement('div');
+        dot.className = 'trail-particle';
+        const size = Math.random() * 6 + 4;
+        dot.style.cssText = `width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};left:${e.clientX}px;top:${e.clientY}px;opacity:${isDark?0.85:0.7}`;
+        document.body.appendChild(dot);
+        dot.addEventListener('animationend', () => dot.remove());
+      });
+    }
+  </script>
+</body>
+</html>
