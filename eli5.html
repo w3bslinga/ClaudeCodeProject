@@ -218,7 +218,7 @@
     .results-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
     .results-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+      display: grid; grid-template-columns: 1fr; gap: 1rem;
     }
 
     .result-box {
@@ -430,7 +430,7 @@
       </div>
       <h1>Explain Like I'm 5</h1>
       <p style="font-style:italic; font-size:0.85rem; margin-top:0.25rem;"><span class="rainbow-text">Powered by Claude Opus 4.6</span></p>
-      <p class="subtitle">Enter any topic and get a simple + detailed explanation</p>
+      <p class="subtitle">Enter any topic and get a simple explanation</p>
     </div>
 
     <!-- Input -->
@@ -454,10 +454,6 @@
         <div class="result-box">
           <div class="result-box-title">Simple Explanation</div>
           <div class="result-box-content" id="simple-result"></div>
-        </div>
-        <div class="result-box">
-          <div class="result-box-title">Detailed Breakdown</div>
-          <div class="result-box-content" id="detailed-result"></div>
         </div>
       </div>
     </div>
@@ -519,7 +515,6 @@
     const loadingSection = document.getElementById('loading-section');
     const resultsSection = document.getElementById('results-section');
     const simpleResult   = document.getElementById('simple-result');
-    const detailedResult = document.getElementById('detailed-result');
     const chatSection    = document.getElementById('chat-section');
     const chatMessages   = document.getElementById('chat-messages');
     const chatInput      = document.getElementById('chat-input');
@@ -563,7 +558,6 @@
         showResults(data);
       } catch (err) {
         simpleResult.innerHTML = `<div class="result-error">${escHtml(err.message)}</div>`;
-        detailedResult.innerHTML = '';
         resultsSection.classList.add('visible');
       } finally {
         loadingSection.classList.remove('visible');
@@ -573,24 +567,16 @@
     }
 
     function showResults(data) {
-      const simple = data.simple || data.result || '';
-      const detailed = data.detailed || '';
+      const explanation = (data.result || '').trim();
 
-      simpleResult.textContent = simple;
-
-      // Parse detailed for rich formatting (bold, bullets)
-      if (detailed) {
-        detailedResult.innerHTML = formatDetailed(detailed);
-      } else {
-        detailedResult.textContent = 'No detailed breakdown available.';
-      }
+      simpleResult.textContent = explanation;
 
       resultsSection.classList.add('visible');
 
-      // Initialize chat
+      // Initialize chat — trim assistant content to avoid trailing whitespace error
       chatHistory = [
         { role: 'user', content: `Explain "${currentTopic}" like I'm 5.` },
-        { role: 'assistant', content: `Simple: ${simple}\n\nDetailed: ${detailed}` }
+        { role: 'assistant', content: explanation }
       ];
       questionCount = 0;
       chatMessages.innerHTML = '';
@@ -670,7 +656,7 @@
 
         typing.remove();
 
-        let answer = data.simple || data.result || '';
+        let answer = (data.result || '').trim();
 
         chatHistory.push({ role: 'user', content: prompt });
         chatHistory.push({ role: 'assistant', content: answer });

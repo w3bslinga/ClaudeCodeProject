@@ -886,20 +886,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             "If the user asks something inappropriate, offensive, or sexual, respond with: "
             "\"Oops! That's not something we can talk about. Let's pick a fun topic instead! "
             "How about asking me about dinosaurs, space, or rainbows?\"\n\n"
-            "When giving the INITIAL explanation, provide TWO versions clearly separated:\n"
-            "First write a section starting with '=== SIMPLE ===' that gives a very simple 2-4 sentence "
-            "explanation a 5-year-old would understand.\n"
-            "Then write a section starting with '=== DETAILED ===' that gives a richer explanation with "
-            "bullet points, bold text (using **bold**), and fun analogies — still simple but more thorough.\n\n"
-            "For FOLLOW-UP questions, respond naturally in a simple, child-friendly way "
-            "without the === sections."
+            "Keep explanations to 3-5 simple sentences. Make it fun and easy to understand."
         )
 
-        # Build API messages
+        # Build API messages, stripping trailing whitespace from assistant content
         api_messages = []
         if messages:
             for msg in messages:
-                api_messages.append({"role": msg["role"], "content": msg["content"]})
+                content = msg["content"].rstrip() if msg["role"] == "assistant" else msg["content"]
+                api_messages.append({"role": msg["role"], "content": content})
             if prompt:
                 api_messages.append({"role": "user", "content": prompt})
         else:
