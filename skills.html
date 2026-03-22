@@ -284,11 +284,11 @@
     }
 
     .skill-icon {
-      width: 72px;
-      height: 72px;
+      font-size: 4.5rem;
+      line-height: 1;
       margin-bottom: 1.25rem;
-      color: var(--accent);
       transition: transform 0.3s ease;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
     }
     .skill-card:hover .skill-icon {
       animation: iconBounce 0.5s ease;
@@ -395,6 +395,13 @@
         </svg>
         Mood Radio
       </a></li>
+      <li><a class="nav-item" href="skills.html">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        Skills Zone
+      </a></li>
       <li><a class="nav-item" href="image-analyzer.html">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -409,13 +416,6 @@
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
         Video Research Center
-      </a></li>
-      <li><a class="nav-item" href="skills.html">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-        </svg>
-        Skills Zone
       </a></li>
       <li><a class="nav-item" href="architecture.html">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -448,30 +448,14 @@
     <div class="skill-grid">
       <!-- ELI5 -->
       <a class="skill-card" href="eli5.html">
-        <svg class="skill-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="32" cy="24" r="14" stroke="currentColor" stroke-width="2.5" fill="none"/>
-          <circle cx="26" cy="21" r="2" fill="currentColor"/>
-          <circle cx="38" cy="21" r="2" fill="currentColor"/>
-          <path d="M25 28c0 0 3 5 7 5s7-5 7-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M18 14c-2-4 0-10 5-11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M46 14c2-4 0-10-5-11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M22 38c-4 2-8 6-8 12v6h36v-6c0-6-4-10-8-12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-        </svg>
+        <span class="skill-icon">👶</span>
         <span class="skill-name">Explain Like I'm 5</span>
         <span class="skill-desc">Turn complex topics into simple explanations</span>
       </a>
 
       <!-- Prompt Engineer -->
       <a class="skill-card" href="prompt-engineer.html">
-        <svg class="skill-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="32" cy="30" r="12" stroke="currentColor" stroke-width="2.5" fill="none"/>
-          <circle cx="28" cy="28" r="1.5" fill="currentColor"/>
-          <circle cx="36" cy="28" r="1.5" fill="currentColor"/>
-          <path d="M28 33c0 0 2 3 4 3s4-3 4-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <path d="M20 20 L20 12 L44 12 L44 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-          <rect x="18" y="8" width="28" height="5" rx="2" stroke="currentColor" stroke-width="2.5" fill="none"/>
-          <path d="M24 42c-3 2-6 5-6 10v4h28v-4c0-5-3-8-6-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-        </svg>
+        <span class="skill-icon">👷</span>
         <span class="skill-name">Prompt Engineer</span>
         <span class="skill-desc">Transform rough prompts into expert-level prompts</span>
       </a>
