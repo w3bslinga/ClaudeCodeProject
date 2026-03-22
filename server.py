@@ -872,7 +872,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         topic = body.get("topic", "").strip()
         messages = body.get("messages", [])
-        prompt = body.get("prompt", "").strip()
+        prompt = body.get("prompt", "").strip() or body.get("followUp", "").strip()
 
         # Initial request needs a topic; follow-ups need a prompt
         if not topic and not prompt:
