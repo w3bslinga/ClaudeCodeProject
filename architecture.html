@@ -3,15 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Architecture View</title>
+  <title>Architecture Blueprint</title>
   <style>
+    /* ═══════════════════════════════════════════════════════════
+       CSS CUSTOM PROPERTIES
+    ═══════════════════════════════════════════════════════════ */
     :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --surface2: #1c2230;
-      --border: #30363d;
-      --text: #e6edf3;
-      --muted: #8b949e;
+      --bg: #0a192f;
+      --bg-deep: #060f1f;
+      --surface: #112240;
+      --surface2: #1d3461;
+      --border: #1e3a5f;
+      --border-bright: #264f78;
+      --text: #ccd6f6;
+      --text-dim: #8892b0;
+      --accent: #64ffda;
+      --accent-glow: rgba(100, 255, 218, 0.15);
       --accent-blue: #58a6ff;
       --accent-green: #3fb950;
       --accent-orange: #f0883e;
@@ -19,14 +26,25 @@
       --accent-yellow: #e3b341;
       --accent-red: #f85149;
       --accent-teal: #39d3c3;
+      --grid-color: rgba(100, 255, 218, 0.04);
+      --grid-line: rgba(100, 255, 218, 0.08);
+      --sidebar-w: 220px;
+      --mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', Consolas, monospace;
+      --flip-speed: 0.6s;
     }
     [data-theme="light"] {
-      --bg: #f0f2f5;
+      --bg: #e8edf5;
+      --bg-deep: #dde3ee;
       --surface: #ffffff;
-      --surface2: #f5f6f8;
-      --border: #d0d7de;
-      --text: #1f2328;
-      --muted: #656d76;
+      --surface2: #f0f4fa;
+      --border: #c0cfe0;
+      --border-bright: #8da4c4;
+      --text: #1a2744;
+      --text-dim: #4a5a7a;
+      --accent: #0fa68a;
+      --accent-glow: rgba(15, 166, 138, 0.1);
+      --grid-color: rgba(15, 166, 138, 0.03);
+      --grid-line: rgba(15, 166, 138, 0.06);
       --accent-blue: #0969da;
       --accent-green: #1a7f37;
       --accent-orange: #bc4c00;
@@ -36,184 +54,688 @@
       --accent-teal: #0e8a7e;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* ═══════════════════════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+      font-family: var(--mono);
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding: 32px 24px 64px;
-    }
-
-    /* ─── Header ───────────────────────────────────────────────── */
-    .header {
-      text-align: center;
-      margin-bottom: 48px;
-    }
-    .header h1 {
-      font-size: 1.9rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: var(--text);
-    }
-    .header h1 span { color: var(--accent-blue); }
-    .header p {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-    .badge {
-      display: inline-block;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-top: 10px;
-    }
-
-    /* ─── Layout ────────────────────────────────────────────────── */
-    .diagram {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    }
-
-    /* ─── Zone Wrapper ──────────────────────────────────────────── */
-    .zone {
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      background: var(--surface);
-      padding: 20px 24px 24px;
+      overflow-x: hidden;
       position: relative;
     }
-    .zone-label {
-      position: absolute;
-      top: -11px;
-      left: 20px;
-      background: var(--bg);
-      padding: 0 8px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.2px;
-      color: var(--muted);
+
+    /* Blueprint grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+      background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+      z-index: 0;
+      pointer-events: none;
     }
 
-    /* Tier colors */
-    .zone-client  { border-color: #2d333b; }
-    .zone-edge    { border-color: #264f78; }
-    .zone-frontend{ border-color: #1f4a2e; }
-    .zone-backend { border-color: #4a2e1f; }
-    .zone-ai      { border-color: #3b1f4a; }
-    .zone-dev     { border-color: #4a3b1f; }
+    /* Scanline FX */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px);
+      pointer-events: none;
+      z-index: 9990;
+    }
+    [data-theme="light"] body::after { background: none; }
 
-    .zone-client  .zone-label { color: #8b949e; }
-    .zone-edge    .zone-label { color: #58a6ff; }
-    .zone-frontend .zone-label { color: #3fb950; }
-    .zone-backend .zone-label { color: #f0883e; }
-    .zone-ai      .zone-label { color: #bc8cff; }
-    .zone-dev     .zone-label { color: #e3b341; }
+    html { scroll-behavior: smooth; }
 
-    /* ─── Connector arrows ──────────────────────────────────────── */
-    .connector {
+    /* ═══════════════════════════════════════════════════════════
+       RAINBOW TITLE EFFECT
+    ═══════════════════════════════════════════════════════════ */
+    @keyframes rainbowShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .rainbow-text {
+      background: linear-gradient(90deg, #f97316, #eab308, #22c55e, #3b82f6, #a855f7, #ec4899, #f97316);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      animation: rainbowShift 4s ease infinite;
+      font-weight: 500;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       LAYOUT: SIDEBAR + MAIN
+    ═══════════════════════════════════════════════════════════ */
+    .layout {
+      display: flex;
+      min-height: 100vh;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Left Sidebar ── */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--bg-deep);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 50;
+      padding: 20px 0;
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+    }
+    .sidebar-brand {
+      padding: 0 16px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .sidebar-brand h2 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .sidebar-brand p {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+    .sidebar-nav {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 0 8px;
+      flex: 1;
+    }
+    .sidebar-nav li a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      letter-spacing: 0.3px;
+    }
+    .sidebar-nav li a:hover,
+    .sidebar-nav li a.active {
+      background: var(--accent-glow);
+      color: var(--accent);
+      border-color: rgba(100, 255, 218, 0.15);
+    }
+    .sidebar-nav li a .tier-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px; height: 22px;
+      border-radius: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 0.58rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .sidebar-nav li a.active .tier-num {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+    }
+
+    /* ── Main content area ── */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      padding: 64px 40px 80px;
+      min-width: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       TOP BAR
+    ═══════════════════════════════════════════════════════════ */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: var(--sidebar-w);
+      right: 0;
+      height: 48px;
+      background: var(--bg-deep);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 60;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .top-bar-left, .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-icon {
+      width: 34px; height: 34px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-icon:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .btn-icon svg { width: 16px; height: 16px; }
+
+    .theme-toggle .icon-sun,
+    .theme-toggle .icon-moon {
+      position: absolute;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .theme-toggle .icon-moon { opacity: 0; transform: rotate(-30deg) scale(0.8); }
+    [data-theme="light"] .theme-toggle .icon-sun { opacity: 0; transform: rotate(30deg) scale(0.8); }
+    [data-theme="light"] .theme-toggle .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+    .hamburger-btn { display: none; }
+
+    /* ═══════════════════════════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════════════════════════ */
+    .page-header {
+      text-align: center;
+      margin-bottom: 48px;
+      padding-top: 16px;
+    }
+    .page-header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      text-shadow: 0 0 30px rgba(100, 255, 218, 0.3);
+      margin-bottom: 4px;
+    }
+    .page-header .rainbow-text {
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .page-header .subtitle {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+    .page-header .badge {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 4px 14px;
+      border: 1px dashed var(--accent);
+      border-radius: 4px;
+      font-size: 0.62rem;
+      color: var(--accent);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .page-header .flip-instruction {
+      display: block;
+      margin-top: 10px;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+      opacity: 0.8;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       TIER SECTIONS (Collapsible)
+    ═══════════════════════════════════════════════════════════ */
+    .tier-section {
+      position: relative;
+      margin-bottom: 0;
+      scroll-margin-top: 60px;
+    }
+    .tier-band {
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .tier-band::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: var(--tier-color, var(--accent));
+    }
+    .tier-band.highlight {
+      border-color: var(--accent);
+      box-shadow: 0 0 20px rgba(100, 255, 218, 0.08);
+    }
+
+    .tier-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .tier-header:hover {
+      background: rgba(100, 255, 218, 0.03);
+    }
+    .tier-header .tier-label {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--tier-color, var(--accent));
+      font-weight: 700;
+      flex: 1;
+    }
+    .tier-header .tier-chevron {
+      width: 16px; height: 16px;
+      color: var(--text-dim);
+      transition: transform 0.3s;
+      flex-shrink: 0;
+    }
+    .tier-band.collapsed .tier-chevron {
+      transform: rotate(-90deg);
+    }
+    .tier-body {
+      padding: 0 20px 20px;
+      overflow: hidden;
+      transition: max-height 0.4s ease, opacity 0.3s ease;
+      max-height: 3000px;
+      opacity: 1;
+    }
+    .tier-band.collapsed .tier-body {
+      max-height: 0;
+      opacity: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    /* Tier color variants */
+    .tier-client   { --tier-color: #8892b0; }
+    .tier-edge     { --tier-color: #58a6ff; }
+    .tier-frontend { --tier-color: #3fb950; }
+    .tier-backend  { --tier-color: #f0883e; }
+    .tier-apis     { --tier-color: #bc8cff; }
+    .tier-dev      { --tier-color: #e3b341; }
+
+    /* ═══════════════════════════════════════════════════════════
+       CONNECTION LINES BETWEEN TIERS
+    ═══════════════════════════════════════════════════════════ */
+    .connection {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 4px 0;
-      gap: 0;
+      padding: 0;
       position: relative;
+      height: 60px;
     }
-    .connector .line {
+    .connection-line {
       width: 2px;
-      height: 24px;
-      background: var(--border);
+      flex: 1;
+      position: relative;
+      overflow: visible;
     }
-    .connector .line.dashed {
+    .connection-line::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       background: repeating-linear-gradient(
         to bottom,
-        var(--border) 0px, var(--border) 4px,
-        transparent 4px, transparent 8px
+        var(--border-bright) 0px, var(--border-bright) 6px,
+        transparent 6px, transparent 12px
       );
     }
-    .connector svg.arrow {
-      fill: var(--border);
-      display: block;
+    .connection-line::after {
+      content: '';
+      position: absolute;
+      left: -3px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent), 0 0 20px rgba(100, 255, 218, 0.3);
+      animation: flowDown 2s ease-in-out infinite;
     }
-    .connector .label {
-      font-size: 0.68rem;
-      color: var(--muted);
+    @keyframes flowDown {
+      0% { top: -4px; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { top: calc(100% - 4px); opacity: 0; }
+    }
+    .connection-label {
+      font-size: 0.58rem;
+      color: var(--accent);
       background: var(--bg);
-      padding: 2px 8px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
+      padding: 3px 10px;
+      border: 1px dashed var(--border-bright);
+      border-radius: 3px;
       white-space: nowrap;
-      margin: 3px 0;
+      letter-spacing: 0.5px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2;
     }
-    .connector .label.https  { border-color: #264f78; color: var(--accent-blue); }
-    .connector .label.api    { border-color: #3b1f4a; color: var(--accent-purple); }
-    .connector .label.deploy { border-color: #4a3b1f; color: var(--accent-yellow); }
-
-    /* ─── Node grid ─────────────────────────────────────────────── */
-    .nodes {
+    .connection-arrow {
+      width: 0; height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid var(--accent);
+      filter: drop-shadow(0 0 4px rgba(100, 255, 218, 0.5));
+    }
+    .connection-split {
       display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
       justify-content: center;
-      align-items: stretch;
+      gap: 60px;
+      padding: 0;
+    }
+    .connection-split .connection {
+      flex: 1;
+      max-width: 300px;
     }
 
-    /* ─── Node card ─────────────────────────────────────────────── */
-    .node {
-      background: var(--surface2);
-      border: 1.5px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 16px;
-      min-width: 160px;
+    /* ═══════════════════════════════════════════════════════════
+       FLIPPABLE BENTO CARDS (from Option B, styled as blueprint)
+    ═══════════════════════════════════════════════════════════ */
+    .cards-grid {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .cards-grid.centered {
+      justify-content: center;
+    }
+
+    .flip-card {
+      perspective: 1200px;
+      cursor: pointer;
       flex: 1;
-      max-width: 220px;
+      min-width: 180px;
+      max-width: 280px;
+    }
+    .flip-card.wide {
+      max-width: 100%;
+      min-width: 0;
+      flex: 1 1 100%;
+    }
+
+    .flip-card-inner {
+      position: relative;
+      width: 100%;
+      min-height: 180px;
+      transition: transform var(--flip-speed) cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+    }
+    .flip-card.flipped .flip-card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .flip-front, .flip-back {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .flip-card:hover .flip-front,
+    .flip-card:hover .flip-back {
+      border-color: var(--accent);
+      box-shadow: 0 0 15px rgba(100, 255, 218, 0.08);
+    }
+
+    /* Blueprint corner marks */
+    .flip-front::before, .flip-back::before {
+      content: '';
+      position: absolute;
+      top: -1px; right: -1px;
+      width: 12px; height: 12px;
+      border-top: 2px solid var(--tier-color, var(--accent));
+      border-right: 2px solid var(--tier-color, var(--accent));
+      border-radius: 0 4px 0 0;
+      z-index: 2;
+    }
+    .flip-front::after, .flip-back::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: -1px;
+      width: 12px; height: 12px;
+      border-bottom: 2px solid var(--tier-color, var(--accent));
+      border-left: 2px solid var(--tier-color, var(--accent));
+      border-radius: 0 0 0 4px;
+      z-index: 2;
+    }
+
+    .flip-back {
+      transform: rotateY(180deg);
+    }
+
+    .card-strip {
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px dashed var(--border);
+      flex-shrink: 0;
+      background: rgba(100, 255, 218, 0.02);
+    }
+    .card-strip-label {
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--tier-color, var(--accent));
+    }
+    .card-strip-icon {
+      font-size: 1rem;
+    }
+    .flip-hint {
+      font-size: 0.52rem;
+      color: var(--text-dim);
+      opacity: 0;
+      transition: opacity 0.3s;
+      letter-spacing: 0.5px;
+    }
+    .flip-card:hover .flip-hint {
+      opacity: 1;
+    }
+
+    .card-content {
+      padding: 14px 16px;
+      flex: 1;
       display: flex;
       flex-direction: column;
       gap: 6px;
+      overflow-y: auto;
     }
-    .node-icon {
-      font-size: 1.4rem;
-      line-height: 1;
-    }
-    .node-title {
+    .card-title {
       font-size: 0.82rem;
       font-weight: 700;
       color: var(--text);
+      font-family: var(--mono);
     }
-    .node-sub {
-      font-size: 0.71rem;
-      color: var(--muted);
-      line-height: 1.45;
+    .card-sub {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      line-height: 1.7;
     }
+    .card-sub code {
+      color: var(--accent);
+      font-size: 0.6rem;
+    }
+    .card-sub strong {
+      color: var(--text);
+    }
+
+    /* Back card */
+    .back-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .back-detail {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+    .back-detail code {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--accent);
+    }
+    .back-detail ul {
+      padding-left: 16px;
+      margin-top: 4px;
+    }
+    .back-detail li {
+      margin-bottom: 3px;
+    }
+    .back-detail strong {
+      color: var(--text);
+    }
+
+    /* Tags */
     .node-tag {
       display: inline-block;
-      font-size: 0.62rem;
-      font-weight: 600;
+      font-size: 0.54rem;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
-      border-radius: 4px;
+      letter-spacing: 1px;
+      border-radius: 2px;
       padding: 2px 6px;
-      margin-top: 2px;
+      margin-top: 6px;
+      border: 1px solid;
+      font-family: var(--mono);
       width: fit-content;
     }
-    .tag-blue    { background: rgba(88,166,255,.15); color: var(--accent-blue);   border: 1px solid rgba(88,166,255,.3); }
-    .tag-green   { background: rgba(63,185,80,.15);  color: var(--accent-green);  border: 1px solid rgba(63,185,80,.3); }
-    .tag-orange  { background: rgba(240,136,62,.15); color: var(--accent-orange); border: 1px solid rgba(240,136,62,.3); }
-    .tag-purple  { background: rgba(188,140,255,.15);color: var(--accent-purple); border: 1px solid rgba(188,140,255,.3); }
-    .tag-yellow  { background: rgba(227,179,65,.15); color: var(--accent-yellow); border: 1px solid rgba(227,179,65,.3); }
-    .tag-teal    { background: rgba(57,211,195,.15); color: var(--accent-teal);   border: 1px solid rgba(57,211,195,.3); }
-    .tag-red     { background: rgba(248,81,73,.15);  color: var(--accent-red);    border: 1px solid rgba(248,81,73,.3); }
+    .tag-blue    { background: rgba(88,166,255,.1);  color: var(--accent-blue);   border-color: rgba(88,166,255,.3); }
+    .tag-green   { background: rgba(63,185,80,.1);   color: var(--accent-green);  border-color: rgba(63,185,80,.3); }
+    .tag-orange  { background: rgba(240,136,62,.1);  color: var(--accent-orange); border-color: rgba(240,136,62,.3); }
+    .tag-purple  { background: rgba(188,140,255,.1); color: var(--accent-purple); border-color: rgba(188,140,255,.3); }
+    .tag-yellow  { background: rgba(227,179,65,.1);  color: var(--accent-yellow); border-color: rgba(227,179,65,.3); }
+    .tag-teal    { background: rgba(57,211,195,.1);  color: var(--accent-teal);   border-color: rgba(57,211,195,.3); }
+    .tag-red     { background: rgba(248,81,73,.1);   color: var(--accent-red);    border-color: rgba(248,81,73,.3); }
 
-    /* ─── Horizontal flow inside a zone ────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════
+       INFO CHIPS
+    ═══════════════════════════════════════════════════════════ */
+    .info-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .info-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 6px 12px;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      flex: 1;
+      min-width: 170px;
+      line-height: 1.5;
+    }
+    .info-chip .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-green  { background: var(--accent-green); }
+    .dot-orange { background: var(--accent-orange); }
+    .dot-purple { background: var(--accent-purple); }
+    .dot-blue   { background: var(--accent-blue); }
+    .dot-yellow { background: var(--accent-yellow); }
+    .dot-teal   { background: var(--accent-teal); }
+
+    /* ═══════════════════════════════════════════════════════════
+       SPLIT LAYOUT & MCP BOX
+    ═══════════════════════════════════════════════════════════ */
+    .split {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .split-left  { flex: 1; min-width: 200px; }
+    .split-right { flex: 1; min-width: 200px; }
+    .section-title {
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+    .mcp-box {
+      background: rgba(188,140,255,.04);
+      border: 1px dashed rgba(188,140,255,.25);
+      border-radius: 4px;
+      padding: 14px;
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+    .mcp-box strong { color: var(--accent-purple); }
+    .mcp-box ul { padding-left: 16px; margin-top: 6px; }
+    .mcp-box li { margin-bottom: 3px; }
+    .flow-box {
+      background: rgba(88,166,255,.04);
+      border: 1px dashed rgba(88,166,255,.25);
+      border-radius: 4px;
+      padding: 14px;
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+    .flow-box strong { color: var(--accent-blue); }
+
+    /* ═══════════════════════════════════════════════════════════
+       HORIZONTAL FLOW (Dev pipeline)
+    ═══════════════════════════════════════════════════════════ */
     .hflow {
       display: flex;
       align-items: center;
@@ -225,184 +747,147 @@
       display: flex;
       align-items: center;
       gap: 0;
-      padding: 0 4px;
+      padding: 0 6px;
     }
     .hconnector .hline {
       height: 2px;
-      width: 28px;
-      background: var(--border);
+      width: 24px;
+      background: var(--border-bright);
+      position: relative;
     }
-    .hconnector .hlabel {
-      font-size: 0.62rem;
-      color: var(--muted);
-      white-space: nowrap;
-      padding: 1px 6px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-    }
-
-    /* ─── Info strip ────────────────────────────────────────────── */
-    .info-row {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 14px;
-    }
-    .info-chip {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 6px 12px;
-      font-size: 0.72rem;
-      color: var(--muted);
-      flex: 1;
-      min-width: 180px;
-    }
-    .info-chip .dot {
+    .hconnector .hline::after {
+      content: '';
+      position: absolute;
+      top: -3px; left: 0;
       width: 8px; height: 8px;
       border-radius: 50%;
-      flex-shrink: 0;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+      animation: flowRight 2s ease-in-out infinite;
     }
-    .dot-green  { background: var(--accent-green); }
-    .dot-orange { background: var(--accent-orange); }
-    .dot-purple { background: var(--accent-purple); }
-    .dot-blue   { background: var(--accent-blue); }
-    .dot-yellow { background: var(--accent-yellow); }
-    .dot-teal   { background: var(--accent-teal); }
+    @keyframes flowRight {
+      0% { left: -4px; opacity: 0; }
+      15% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { left: calc(100% - 4px); opacity: 0; }
+    }
+    .hconnector .hlabel {
+      font-size: 0.54rem;
+      color: var(--accent);
+      white-space: nowrap;
+      padding: 2px 8px;
+      background: var(--bg);
+      border: 1px dashed var(--border);
+      border-radius: 2px;
+      letter-spacing: 0.5px;
+    }
 
-    /* ─── Legend ────────────────────────────────────────────────── */
+    .pipeline-node {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 14px 16px;
+      min-width: 120px;
+      max-width: 155px;
+      position: relative;
+      text-align: center;
+    }
+    .pipeline-node::before {
+      content: '';
+      position: absolute;
+      top: -1px; right: -1px;
+      width: 12px; height: 12px;
+      border-top: 2px solid var(--accent-yellow);
+      border-right: 2px solid var(--accent-yellow);
+      border-radius: 0 4px 0 0;
+    }
+    .pipeline-node::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: -1px;
+      width: 12px; height: 12px;
+      border-bottom: 2px solid var(--accent-yellow);
+      border-left: 2px solid var(--accent-yellow);
+      border-radius: 0 0 0 4px;
+    }
+    .pipeline-node .node-icon { font-size: 1.2rem; margin-bottom: 4px; }
+    .pipeline-node .node-title { font-size: 0.72rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .pipeline-node .node-sub { font-size: 0.58rem; color: var(--text-dim); line-height: 1.5; }
+
+    /* ═══════════════════════════════════════════════════════════
+       MINIMAP
+    ═══════════════════════════════════════════════════════════ */
+    .minimap {
+      display: none;
+    }
+    .minimap-title {
+      font-size: 0.45rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .minimap-track {
+      position: relative;
+      height: 140px;
+      background: var(--surface);
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .minimap-block {
+      position: absolute;
+      left: 8%; width: 84%;
+      border-radius: 2px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .minimap-block.active {
+      opacity: 1;
+      box-shadow: 0 0 6px currentColor;
+    }
+    .minimap-viewport {
+      position: absolute;
+      left: 0; width: 100%;
+      background: rgba(100, 255, 218, 0.08);
+      border: 1px solid rgba(100, 255, 218, 0.3);
+      border-radius: 2px;
+      transition: top 0.15s, height 0.15s;
+      pointer-events: none;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       LEGEND
+    ═══════════════════════════════════════════════════════════ */
     .legend {
       display: flex;
       gap: 20px;
       flex-wrap: wrap;
       justify-content: center;
-      margin-top: 36px;
+      margin-top: 40px;
       padding-top: 24px;
-      border-top: 1px solid var(--border);
+      border-top: 1px dashed var(--border);
     }
     .legend-item {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.72rem;
-      color: var(--muted);
+      font-size: 0.6rem;
+      color: var(--text-dim);
     }
     .legend-line {
-      width: 28px;
-      height: 2px;
+      width: 28px; height: 2px;
     }
 
-    /* ─── Section title ─────────────────────────────────────────── */
-    .section-title {
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-      margin-bottom: 12px;
-    }
-
-    /* ─── MCP detail box ─────────────────────────────────────────── */
-    .mcp-box {
-      background: rgba(188,140,255,.06);
-      border: 1px dashed rgba(188,140,255,.35);
-      border-radius: 8px;
-      padding: 12px 14px;
-      font-size: 0.72rem;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-    .mcp-box strong { color: var(--accent-purple); }
-    .mcp-box ul { padding-left: 16px; margin-top: 4px; }
-    .mcp-box li { margin-bottom: 2px; }
-
-    /* ─── Split two-col ─────────────────────────────────────────── */
-    .split {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .split-left  { flex: 1; min-width: 220px; }
-    .split-right { flex: 1; min-width: 220px; }
-
-    /* ─── Navigation ────────────────────────────────────────────── */
-    .home-btn {
-      position: fixed;
-      top: 1.1rem;
-      left: 1.1rem;
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-decoration: none;
-      color: var(--text);
-      background: rgba(255,255,255,0.1);
-      border: 1.5px solid var(--border);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      transition: transform 0.15s, box-shadow 0.15s;
-      z-index: 100;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
-    }
-    .home-btn:hover { transform: scale(1.07); box-shadow: 0 4px 16px rgba(0,0,0,0.18); }
-    .theme-toggle {
-      position: fixed;
-      top: 1.1rem;
-      right: 1.1rem;
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      border: none;
-      background: var(--surface);
-      color: var(--text);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.15s, transform 0.1s;
-      z-index: 100;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
-    }
-    .theme-toggle:hover { background: var(--surface2); }
-    .theme-toggle:active { transform: scale(0.92); }
-    .theme-toggle .icon-sun,
-    .theme-toggle .icon-moon {
-      position: absolute;
-      transition: opacity 0.2s, transform 0.2s;
-    }
-    .theme-toggle .icon-moon { opacity: 0; transform: rotate(-30deg) scale(0.8); }
-    [data-theme="light"] .theme-toggle .icon-sun { opacity: 0; transform: rotate(30deg) scale(0.8); }
-    [data-theme="light"] .theme-toggle .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
-    .hamburger {
-      position: fixed;
-      top: 3.8rem;
-      left: 1.1rem;
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      border: none;
-      background: var(--surface);
-      color: var(--text);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.15s;
-      z-index: 200;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
-    }
-    .hamburger:hover { background: var(--surface2); }
+    /* ═══════════════════════════════════════════════════════════
+       MOBILE NAV DRAWER
+    ═══════════════════════════════════════════════════════════ */
     .nav-overlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.6);
       z-index: 300;
     }
     .nav-overlay.open { display: block; }
@@ -429,16 +914,15 @@
       margin-bottom: 1rem;
     }
     .nav-drawer-title {
-      font-size: 0.78rem;
+      font-size: 0.7rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
     }
     .nav-close {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
+      width: 32px; height: 32px;
+      border-radius: 6px;
       border: none;
       background: transparent;
       color: var(--text);
@@ -446,54 +930,68 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s;
     }
     .nav-close:hover { background: var(--surface2); }
     .nav-list {
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 2px;
     }
-    .nav-item {
+    .nav-list .nav-item {
       display: block;
       padding: 0.6rem 0.75rem;
-      border-radius: 8px;
+      border-radius: 6px;
       text-decoration: none;
-      font-size: 0.92rem;
+      font-size: 0.82rem;
       font-weight: 500;
       color: var(--text);
       transition: background 0.15s, color 0.15s;
+      font-family: var(--mono);
     }
-    .nav-item:hover { background: var(--surface2); color: var(--accent-blue); }
+    .nav-list .nav-item:hover {
+      background: var(--surface2);
+      color: var(--accent);
+    }
 
-    /* ─── Mobile responsive ──────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════════════════════ */
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.mobile-open { transform: translateX(0); z-index: 310; }
+      .main { margin-left: 0; }
+      .top-bar { left: 0; }
+      .hamburger-btn { display: flex; }
+      .minimap { display: none; }
+      .flip-card { max-width: 100%; }
+    }
+
     @media (max-width: 600px) {
-      body { padding: 16px 12px 48px; }
-      .header { margin-bottom: 28px; }
-      .header h1 { font-size: 1.3rem; }
-      .zone { padding: 16px 12px 16px; }
-      .node { min-width: 130px; max-width: 100%; }
-      .nodes { gap: 10px; }
+      .main { padding: 56px 12px 60px; }
+      .flip-card { min-width: 120px; max-width: 100%; }
+      .cards-grid { gap: 8px; }
       .split { flex-direction: column; }
       .split-left, .split-right { min-width: 0; width: 100%; }
-      .info-chip { min-width: 0; flex: 1 1 45%; font-size: 0.68rem; }
-      .hflow { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .info-chip { min-width: 0; flex: 1 1 100%; font-size: 0.56rem; }
+      .hflow { flex-direction: column; align-items: stretch; gap: 6px; }
       .hconnector { display: none; }
-      .connector .label { white-space: normal; text-align: center; }
-      .legend { gap: 12px; }
-      .theme-toggle { top: auto; bottom: 1.1rem; right: 1.1rem; }
+      .connection-split { flex-direction: column; align-items: center; gap: 0; }
+      .connection-split .connection { max-width: 100%; }
+      .page-header h1 { font-size: 1.1rem; letter-spacing: 2px; }
     }
 
-    /* ── Star cursor + particle trail ── */
+    /* ═══════════════════════════════════════════════════════════
+       STAR CURSOR + PARTICLE TRAIL
+    ═══════════════════════════════════════════════════════════ */
     * { cursor: none !important; }
     #star-cursor {
       position: fixed; width: 22px; height: 22px;
       pointer-events: none; z-index: 99999;
       transform: translate(-50%, -50%); will-change: left, top;
     }
-    #star-cursor svg { width: 100%; height: 100%; filter: drop-shadow(0 0 4px rgba(99,102,241,0.6)); }
-    [data-theme="dark"] #star-cursor svg { filter: drop-shadow(0 0 5px rgba(129,140,248,0.9)); }
+    #star-cursor svg { width: 100%; height: 100%; filter: drop-shadow(0 0 4px rgba(100,255,218,0.6)); }
+    [data-theme="light"] #star-cursor svg { filter: drop-shadow(0 0 5px rgba(15,166,138,0.7)); }
     @keyframes starSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
     #star-cursor.spinning { animation: starSpin 0.6s linear infinite; }
     .trail-particle {
@@ -504,26 +1002,44 @@
       0%   { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
       100% { opacity: 0;    transform: translate(-50%, calc(-50% - 18px)) scale(0.2); }
     }
+
+    /* ═══════════════════════════════════════════════════════════
+       FADE-IN ANIMATION
+    ═══════════════════════════════════════════════════════════ */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body>
 
-<!-- Home button -->
-<a class="home-btn" href="index.html" aria-label="Go to home">
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-    <polyline points="9 22 9 12 15 12 15 22"/>
-  </svg>
-</a>
+<!-- ═══════════════════════════════════════════════════════════
+     SIDEBAR NAVIGATION
+═══════════════════════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <h2>Blueprint</h2>
+    <p>alwinthomas.click<br>Architecture Map</p>
+  </div>
+  <ul class="sidebar-nav" id="sidebar-nav">
+    <li><a href="#tier-1" data-tier="tier-1"><span class="tier-num">1</span> User / Client</a></li>
+    <li><a href="#tier-2" data-tier="tier-2"><span class="tier-num">2</span> DNS &amp; Edge</a></li>
+    <li><a href="#tier-3" data-tier="tier-3"><span class="tier-num">3</span> Frontend</a></li>
+    <li><a href="#tier-4" data-tier="tier-4"><span class="tier-num">4</span> Backend</a></li>
+    <li><a href="#tier-5" data-tier="tier-5"><span class="tier-num">5</span> External APIs</a></li>
+    <li><a href="#tier-6" data-tier="tier-6"><span class="tier-num">6</span> Dev / Deploy</a></li>
+  </ul>
+</aside>
 
-<!-- Hamburger -->
-<button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-  </svg>
-</button>
+<!-- ═══════════════════════════════════════════════════════════
+     MOBILE NAV DRAWER
+═══════════════════════════════════════════════════════════ -->
 <div class="nav-overlay" id="nav-overlay"></div>
 <nav class="nav-drawer" id="nav-drawer" aria-hidden="true">
   <div class="nav-drawer-header">
@@ -536,7 +1052,6 @@
   </div>
   <ul class="nav-list">
     <li><a class="nav-item" href="index.html">Home</a></li>
-    <li><a class="nav-item" href="sudoku.html">Sudoku</a></li>
     <li><a class="nav-item" href="music.html">Mood Radio</a></li>
     <li><a class="nav-item" href="skills.html">Skills Zone</a></li>
     <li><a class="nav-item" href="image-analyzer.html">Image Analyzer</a></li>
@@ -545,53 +1060,1100 @@
   </ul>
 </nav>
 
-<!-- Theme toggle -->
-<button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
-  <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-    <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-  </svg>
-  <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-  </svg>
-</button>
+<!-- ═══════════════════════════════════════════════════════════
+     TOP BAR
+═══════════════════════════════════════════════════════════ -->
+<div class="top-bar">
+  <div class="top-bar-left">
+    <button class="btn-icon hamburger-btn" id="hamburger" aria-label="Open menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+    <a class="btn-icon" href="index.html" aria-label="Go to home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </a>
+    <button class="btn-icon" id="pages-btn" aria-label="Open pages menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="top-bar-right">
+    <button class="btn-icon theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+  </div>
+</div>
 
+<!-- ═══════════════════════════════════════════════════════════
+     MINIMAP
+═══════════════════════════════════════════════════════════ -->
+<div class="minimap" id="minimap">
+  <div class="minimap-title">Map</div>
+  <div class="minimap-track" id="minimap-track">
+    <div class="minimap-block" id="mm-1" style="top:2%;height:10%;background:#8892b0;color:#8892b0"></div>
+    <div class="minimap-block" id="mm-2" style="top:15%;height:14%;background:#58a6ff;color:#58a6ff"></div>
+    <div class="minimap-block" id="mm-3" style="top:32%;height:16%;background:#3fb950;color:#3fb950"></div>
+    <div class="minimap-block" id="mm-4" style="top:51%;height:14%;background:#f0883e;color:#f0883e"></div>
+    <div class="minimap-block" id="mm-5" style="top:68%;height:14%;background:#bc8cff;color:#bc8cff"></div>
+    <div class="minimap-block" id="mm-6" style="top:85%;height:13%;background:#e3b341;color:#e3b341"></div>
+    <div class="minimap-viewport" id="minimap-viewport"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN CONTENT
+═══════════════════════════════════════════════════════════ -->
+<div class="layout">
+  <div class="main" id="main-content">
+
+    <div class="page-header fade-in">
+      <h1>Architecture Blueprint</h1>
+      <p class="rainbow-text">Builder: Alwin Thomas</p>
+      <p class="subtitle">Full-stack portfolio site &mdash; static frontend + AI-powered backend</p>
+      <div class="badge">REV. March 2026</div>
+      <span class="flip-instruction">Click any card to flip and reveal technical details</span>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         TIER 1: CLIENT
+    ════════════════════════════════════════════════════════ -->
+    <div class="tier-section fade-in" id="tier-1">
+      <div class="tier-band tier-client">
+        <div class="tier-header" onclick="toggleTier(this)">
+          <span class="tier-label">Tier 1 &mdash; User / Client</span>
+          <svg class="tier-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="tier-body">
+          <div class="cards-grid centered">
+
+            <!-- Web Browser -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip">
+                    <span class="card-strip-label">Web Browser</span>
+                    <span class="card-strip-icon">&#x1F310;</span>
+                    <span class="flip-hint">click to flip</span>
+                  </div>
+                  <div class="card-content">
+                    <div class="card-title">Desktop Browser</div>
+                    <div class="card-sub">Primary access point for all portfolio pages. Desktop and laptop users with full viewport experience.</div>
+                    <span class="node-tag tag-blue">End User</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip">
+                    <span class="card-strip-label">Technical Details</span>
+                    <span class="flip-hint">click to flip back</span>
+                  </div>
+                  <div class="card-content">
+                    <div class="back-title">Browser Capabilities Used</div>
+                    <div class="back-detail">
+                      <ul>
+                        <li><strong>HTTPS Requests</strong> &mdash; All traffic encrypted via TLS</li>
+                        <li><strong>File API</strong> &mdash; Image upload for AI analyzer</li>
+                        <li><strong>Canvas API</strong> &mdash; Client-side image resize before upload</li>
+                        <li><strong>Fetch API</strong> &mdash; Cross-origin calls to Render backend</li>
+                        <li><strong>LocalStorage</strong> &mdash; Theme persistence (dark/light)</li>
+                        <li><strong>CSS Variables</strong> &mdash; Dynamic theming via <code>data-theme</code></li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mobile Browser -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip">
+                    <span class="card-strip-label">Mobile Browser</span>
+                    <span class="card-strip-icon">&#x1F4F1;</span>
+                    <span class="flip-hint">click to flip</span>
+                  </div>
+                  <div class="card-content">
+                    <div class="card-title">Mobile Experience</div>
+                    <div class="card-sub">Responsive layout with touch-optimised controls. Full feature parity with desktop.</div>
+                    <span class="node-tag tag-blue">End User</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip">
+                    <span class="card-strip-label">Technical Details</span>
+                    <span class="flip-hint">click to flip back</span>
+                  </div>
+                  <div class="card-content">
+                    <div class="back-title">Mobile Optimizations</div>
+                    <div class="back-detail">
+                      <ul>
+                        <li>Breakpoint: <code>&le;520px</code> for compact layout</li>
+                        <li>Viewport meta tag for proper scaling</li>
+                        <li>Touch-optimised tap targets</li>
+                        <li>Cursor halo effect disabled on touch devices</li>
+                        <li>Hamburger navigation for reduced screen space</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connection: Tier 1 -> 2 -->
+    <div class="connection fade-in">
+      <div class="connection-line">
+        <span class="connection-label">HTTPS &nbsp; www.alwinthomas.click</span>
+      </div>
+      <div class="connection-arrow"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         TIER 2: DNS & EDGE / CDN
+    ════════════════════════════════════════════════════════ -->
+    <div class="tier-section fade-in" id="tier-2">
+      <div class="tier-band tier-edge">
+        <div class="tier-header" onclick="toggleTier(this)">
+          <span class="tier-label">Tier 2 &mdash; DNS &amp; Edge / CDN</span>
+          <svg class="tier-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="tier-body">
+          <div class="split">
+            <div class="split-left">
+              <div class="section-title">Domain &amp; DNS</div>
+              <div class="cards-grid">
+
+                <!-- Domain -->
+                <div class="flip-card" onclick="flipCard(this)">
+                  <div class="flip-card-inner">
+                    <div class="flip-front">
+                      <div class="card-strip">
+                        <span class="card-strip-label">Domain &amp; DNS</span>
+                        <span class="card-strip-icon">&#x1F516;</span>
+                        <span class="flip-hint">click to flip</span>
+                      </div>
+                      <div class="card-content">
+                        <div class="card-title">alwinthomas.click</div>
+                        <div class="card-sub">Custom domain registered externally. CNAME file in repo points to GitHub Pages.</div>
+                        <span class="node-tag tag-teal">DNS &middot; CNAME</span>
+                      </div>
+                    </div>
+                    <div class="flip-back">
+                      <div class="card-strip">
+                        <span class="card-strip-label">DNS Config</span>
+                        <span class="flip-hint">click to flip back</span>
+                      </div>
+                      <div class="card-content">
+                        <div class="back-title">DNS Configuration</div>
+                        <div class="back-detail">
+                          <ul>
+                            <li>CNAME file in repo: <code>www.alwinthomas.click</code></li>
+                            <li>DNS lookup resolves CNAME to GitHub Pages IP addresses</li>
+                            <li>TLS certificate auto-provisioned by GitHub</li>
+                            <li>Supports both apex and www subdomain</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CDN -->
+                <div class="flip-card" onclick="flipCard(this)">
+                  <div class="flip-card-inner">
+                    <div class="flip-front">
+                      <div class="card-strip">
+                        <span class="card-strip-label">GitHub Pages CDN</span>
+                        <span class="card-strip-icon">&#x1F512;</span>
+                        <span class="flip-hint">click to flip</span>
+                      </div>
+                      <div class="card-content">
+                        <div class="card-title">HTTPS / TLS Edge</div>
+                        <div class="card-sub">Auto-HTTPS with TLS provisioned by GitHub. Global CDN edge delivery for low-latency static assets.</div>
+                        <span class="node-tag tag-blue">CDN &middot; HTTPS</span>
+                      </div>
+                    </div>
+                    <div class="flip-back">
+                      <div class="card-strip">
+                        <span class="card-strip-label">Traffic Flow</span>
+                        <span class="flip-hint">click to flip back</span>
+                      </div>
+                      <div class="card-content">
+                        <div class="back-title">Request Routing</div>
+                        <div class="back-detail">
+                          <strong>Flow:</strong><br>
+                          Browser DNS lookup <code>www.alwinthomas.click</code><br>
+                          CNAME resolves to <strong>GitHub Pages</strong> CDN nodes<br>
+                          TLS terminated at edge<br>
+                          Static assets served from CDN cache<br>
+                          Dynamic AI calls bypass CDN and go directly to Render backend
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+            <div class="split-right">
+              <div class="section-title">Traffic Routing</div>
+              <div class="flow-box">
+                <strong>Flow:</strong><br>
+                Browser DNS lookup &rarr; <strong style="color:var(--accent-teal)">www.alwinthomas.click</strong><br>
+                &rarr; CNAME resolves to <strong style="color:var(--accent-blue)">GitHub Pages</strong> CDN nodes<br>
+                &rarr; TLS terminated at edge<br>
+                &rarr; Static assets served from CDN cache<br>
+                &rarr; Dynamic AI calls bypass CDN &rarr; Render
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connection: Tier 2 -> 3 -->
+    <div class="connection fade-in">
+      <div class="connection-line">
+        <span class="connection-label">Serves static files from repo branch: main</span>
+      </div>
+      <div class="connection-arrow"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         TIER 3: FRONTEND -- GitHub Pages
+    ════════════════════════════════════════════════════════ -->
+    <div class="tier-section fade-in" id="tier-3">
+      <div class="tier-band tier-frontend">
+        <div class="tier-header" onclick="toggleTier(this)">
+          <span class="tier-label">Tier 3 &mdash; Frontend &middot; GitHub Pages (Static Hosting)</span>
+          <svg class="tier-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="tier-body">
+          <div class="cards-grid">
+
+            <!-- index.html -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip"><span class="card-strip-label">index.html</span><span class="card-strip-icon">&#x1F3E0;</span><span class="flip-hint">click to flip</span></div>
+                  <div class="card-content">
+                    <div class="card-title">Portfolio Home</div>
+                    <div class="card-sub">Bio, skills, projects. Formspree contact form. Visitor counter via Render backend.</div>
+                    <span class="node-tag tag-green">Static Page</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                  <div class="card-content">
+                    <div class="back-detail">
+                      <ul>
+                        <li>Formspree contact form: <code>POST /f/mvzbjenk</code></li>
+                        <li>Visitor counter: cross-origin fetch to Render <code>/visitor-count</code></li>
+                        <li>Responsive layout with CSS variables</li>
+                        <li>Dark/light theme toggle with LocalStorage</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- image-analyzer.html -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip"><span class="card-strip-label">image-analyzer.html</span><span class="card-strip-icon">&#x1F5BC;&#xFE0F;</span><span class="flip-hint">click to flip</span></div>
+                  <div class="card-content">
+                    <div class="card-title">Image Analyzer</div>
+                    <div class="card-sub">AI image analysis tool. File upload, drag-drop, canvas resize. Calls Render backend.</div>
+                    <span class="node-tag tag-orange">AI Feature</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                  <div class="card-content">
+                    <div class="back-detail">
+                      <ul>
+                        <li>Client-side Canvas API resize before upload</li>
+                        <li>Max base64 payload: 5 MB</li>
+                        <li>Calls Render backend <code>/analyze</code></li>
+                        <li>Follow-up chat via <code>/chat</code> endpoint</li>
+                        <li>Drag-and-drop + file picker input</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- music.html -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip"><span class="card-strip-label">music.html</span><span class="card-strip-icon">&#x1F3B5;</span><span class="flip-hint">click to flip</span></div>
+                  <div class="card-content">
+                    <div class="card-title">Mood Radio</div>
+                    <div class="card-sub">Mood-based music streaming app. Embedded player, playlist logic. No backend dependency.</div>
+                    <span class="node-tag tag-green">Static Page</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                  <div class="card-content">
+                    <div class="back-detail">
+                      <ul>
+                        <li>Pure client-side music player</li>
+                        <li>Embedded audio player with playlist logic</li>
+                        <li>Mood selection drives track filtering</li>
+                        <li>No backend API calls required</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- research.html -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip"><span class="card-strip-label">research.html</span><span class="card-strip-icon">&#x1F52C;</span><span class="flip-hint">click to flip</span></div>
+                  <div class="card-content">
+                    <div class="card-title">Video Research Center</div>
+                    <div class="card-sub">Topic search, YouTube video discovery, AI-powered transcript/description summarization.</div>
+                    <span class="node-tag tag-orange">AI Feature</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                  <div class="card-content">
+                    <div class="back-detail">
+                      <ul>
+                        <li>Calls Render backend <code>/research</code> and <code>/super-summary</code></li>
+                        <li>Sticky search bar, video modal player</li>
+                        <li>Fireball Super Summary animation</li>
+                        <li>YouTube video discovery + AI summarization</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- sudoku.html -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip"><span class="card-strip-label">sudoku.html</span><span class="card-strip-icon">&#x1F9E9;</span><span class="flip-hint">click to flip</span></div>
+                  <div class="card-content">
+                    <div class="card-title">Sudoku</div>
+                    <div class="card-sub">Interactive Sudoku game. Pure JS client-side logic, no backend dependency.</div>
+                    <span class="node-tag tag-green">Static Page</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                  <div class="card-content">
+                    <div class="back-detail">
+                      <ul>
+                        <li>Client-side puzzle generation &amp; validation</li>
+                        <li>Multiple difficulty levels</li>
+                        <li>Pure JavaScript &mdash; zero backend calls</li>
+                        <li>Keyboard and touch input support</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- style.css -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip"><span class="card-strip-label">style.css</span><span class="card-strip-icon">&#x1F3A8;</span><span class="flip-hint">click to flip</span></div>
+                  <div class="card-content">
+                    <div class="card-title">Design System</div>
+                    <div class="card-sub">Shared CSS with design tokens via custom properties, dark/light theme toggle, responsive breakpoints.</div>
+                    <span class="node-tag tag-green">Shared Asset</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                  <div class="card-content">
+                    <div class="back-detail">
+                      <ul>
+                        <li>CSS custom properties for all design tokens</li>
+                        <li>Dark/light theme via <code>data-theme</code> attribute</li>
+                        <li>Responsive breakpoints at 900px and 520px</li>
+                        <li>Shared across all portfolio pages</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- eli5.html -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip"><span class="card-strip-label">eli5.html</span><span class="card-strip-icon">&#x1F476;</span><span class="flip-hint">click to flip</span></div>
+                  <div class="card-content">
+                    <div class="card-title">ELI5</div>
+                    <div class="card-sub">Explain Like I'm 5. AI-powered simplified explanations of complex topics via Claude API.</div>
+                    <span class="node-tag tag-orange">AI Feature</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                  <div class="card-content">
+                    <div class="back-detail">
+                      <ul>
+                        <li>AI-powered simplified topic breakdowns</li>
+                        <li>Calls Render backend which proxies to Claude API</li>
+                        <li>User enters topic, gets child-friendly explanation</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- prompt-engineer.html -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip"><span class="card-strip-label">prompt-engineer.html</span><span class="card-strip-icon">&#x1F4DD;</span><span class="flip-hint">click to flip</span></div>
+                  <div class="card-content">
+                    <div class="card-title">Prompt Engineer</div>
+                    <div class="card-sub">Prompt engineering playground. Craft and iterate on AI prompts.</div>
+                    <span class="node-tag tag-orange">AI Feature</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                  <div class="card-content">
+                    <div class="back-detail">
+                      <ul>
+                        <li>Interactive prompt crafting interface</li>
+                        <li>Sends prompts to Render backend proxy</li>
+                        <li>Claude API processes and returns responses</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- cursor-halo.js -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip"><span class="card-strip-label">cursor-halo.js</span><span class="card-strip-icon">&#x2728;</span><span class="flip-hint">click to flip</span></div>
+                  <div class="card-content">
+                    <div class="card-title">Cursor Effect</div>
+                    <div class="card-sub">Decorative cursor halo + particle trail effect module. Loaded on all pages.</div>
+                    <span class="node-tag tag-green">Shared Asset</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                  <div class="card-content">
+                    <div class="back-detail">
+                      <ul>
+                        <li>Light-blue glowing cursor orb</li>
+                        <li>Desktop only (disabled on touch devices)</li>
+                        <li>Smooth RAF tracking for fluid animation</li>
+                        <li>External JS module loaded on all pages</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <div class="info-row">
+            <div class="info-chip"><div class="dot dot-green"></div> Repo: GitHub Pages &middot; branch: main</div>
+            <div class="info-chip"><div class="dot dot-blue"></div> Theme: CSS variables + data-theme, LocalStorage persistence</div>
+            <div class="info-chip"><div class="dot dot-orange"></div> Image resize: Canvas API client-side before upload (&le;5 MB base64)</div>
+            <div class="info-chip"><div class="dot dot-orange"></div> Video Research: sticky search, fireball Super Summary, video modal player</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Split connectors: Formspree + Render -->
+    <div class="connection-split fade-in">
+      <div class="connection" style="max-width:200px">
+        <div class="connection-line" style="background:none">
+          <span class="connection-label" style="font-size:0.52rem">POST contact form</span>
+        </div>
+        <div class="connection-arrow"></div>
+        <div style="font-size:0.56rem;color:var(--text-dim);text-align:center;margin-top:4px">Formspree<br><code style="font-size:0.52rem;color:var(--accent)">formspree.io/f/mvzbjenk</code></div>
+      </div>
+      <div class="connection">
+        <div class="connection-line">
+          <span class="connection-label" style="font-size:0.5rem">POST /analyze &middot; /research &middot; /super-summary &middot; GET /visitor-count &middot; CORS</span>
+        </div>
+        <div class="connection-arrow"></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         TIER 4: BACKEND -- Render
+    ════════════════════════════════════════════════════════ -->
+    <div class="tier-section fade-in" id="tier-4">
+      <div class="tier-band tier-backend">
+        <div class="tier-header" onclick="toggleTier(this)">
+          <span class="tier-label">Tier 4 &mdash; Backend &middot; Render.com (Python Server)</span>
+          <svg class="tier-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="tier-body">
+          <div class="cards-grid">
+
+            <!-- server.py -->
+            <div class="flip-card wide" onclick="flipCard(this)">
+              <div class="flip-card-inner" style="min-height:280px">
+                <div class="flip-front">
+                  <div class="card-strip">
+                    <span class="card-strip-label">server.py &mdash; Python HTTP Proxy</span>
+                    <span class="card-strip-icon">&#x1F40D;</span>
+                    <span class="flip-hint">click to flip</span>
+                  </div>
+                  <div class="card-content">
+                    <div class="card-title">Render Backend</div>
+                    <div class="card-sub">
+                      Port: <strong>8788</strong> &middot; 60s timeout (120s for research)<br><br>
+                      <strong>Routes:</strong><br>
+                      &nbsp;POST <code>/analyze</code> &rarr; validate &rarr; moderate &rarr; forward to Claude API<br>
+                      &nbsp;POST <code>/chat</code> &rarr; follow-up conversation with image context<br>
+                      &nbsp;POST <code>/research</code> &rarr; YouTube search &rarr; fetch transcripts/descriptions &rarr; Claude summarization<br>
+                      &nbsp;POST <code>/super-summary</code> &rarr; consolidate all video summaries into one overview<br>
+                      &nbsp;GET  <code>/visitor-count</code> &rarr; increment &amp; return visitor count from Neon PostgreSQL<br>
+                      &nbsp;GET  <code>/*</code> &rarr; serve static files (dev)
+                    </div>
+                    <span class="node-tag tag-orange">API Proxy &middot; Python</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip">
+                    <span class="card-strip-label">Responsibilities &amp; Config</span>
+                    <span class="flip-hint">click to flip back</span>
+                  </div>
+                  <div class="card-content">
+                    <div class="back-title">Server Responsibilities</div>
+                    <div class="back-detail">
+                      <ul>
+                        <li>CORS headers (GET/POST/OPTIONS)</li>
+                        <li>API key guard (env-only, never client-exposed)</li>
+                        <li>Input validation &amp; image media-type check</li>
+                        <li>Content moderation pipeline</li>
+                        <li>Auto-resize fallback for oversized images</li>
+                        <li>JSON response formatting</li>
+                      </ul>
+                      <br>
+                      <strong>Dependencies:</strong> google-api-python-client, youtube-transcript-api, yt-dlp, psycopg2
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <div class="info-row">
+            <div class="info-chip"><div class="dot dot-orange"></div> CORS: Allow-Origin *, Methods: GET POST OPTIONS</div>
+            <div class="info-chip"><div class="dot dot-orange"></div> Env keys: ANTHROPIC_API_KEY &middot; YOUTUBE_API_KEY &middot; DATABASE_URL</div>
+            <div class="info-chip"><div class="dot dot-orange"></div> Accepted MIME: jpeg, png, gif, webp &middot; limit 5 MB base64</div>
+            <div class="info-chip"><div class="dot dot-orange"></div> Deps: google-api-python-client, youtube-transcript-api, yt-dlp, psycopg2</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Split connectors to APIs -->
+    <div class="connection-split fade-in">
+      <div class="connection">
+        <div class="connection-line">
+          <span class="connection-label" style="font-size:0.5rem">YouTube Data API v3 &middot; YOUTUBE_API_KEY</span>
+        </div>
+        <div class="connection-arrow"></div>
+      </div>
+      <div class="connection">
+        <div class="connection-line">
+          <span class="connection-label" style="font-size:0.5rem">PostgreSQL &middot; DATABASE_URL &middot; SSL</span>
+        </div>
+        <div class="connection-arrow"></div>
+      </div>
+      <div class="connection">
+        <div class="connection-line">
+          <span class="connection-label" style="font-size:0.5rem">POST /v1/messages &middot; ANTHROPIC_API_KEY</span>
+        </div>
+        <div class="connection-arrow"></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         TIER 5: EXTERNAL APIs & DB
+    ════════════════════════════════════════════════════════ -->
+    <div class="tier-section fade-in" id="tier-5">
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+
+        <!-- 5a: YouTube -->
+        <div class="tier-band tier-apis" style="flex:1;min-width:220px">
+          <div class="tier-header" onclick="toggleTier(this)">
+            <span class="tier-label">Tier 5a &mdash; YouTube Data API v3</span>
+            <svg class="tier-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="tier-body">
+            <div class="cards-grid">
+              <div class="flip-card wide" onclick="flipCard(this)">
+                <div class="flip-card-inner" style="min-height:220px">
+                  <div class="flip-front">
+                    <div class="card-strip"><span class="card-strip-label">YouTube Data API v3</span><span class="card-strip-icon">&#x1F4FA;</span><span class="flip-hint">click to flip</span></div>
+                    <div class="card-content">
+                      <div class="card-title">YouTube Data API</div>
+                      <div class="card-sub">
+                        Endpoint: <code style="color:var(--accent-red)">googleapis.com/youtube/v3</code><br>
+                        Quota: <strong>10,000 units/day</strong><br><br>
+                        <strong>Used by /research:</strong><br>
+                        &nbsp;<code>search.list</code> &rarr; find videos by topic (100 units)<br>
+                        &nbsp;<code>videos.list</code> &rarr; durations, views, descriptions (3 units)
+                      </div>
+                      <span class="node-tag tag-red">Video Search &middot; Metadata</span>
+                    </div>
+                  </div>
+                  <div class="flip-back">
+                    <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                    <div class="card-content">
+                      <div class="back-title">API Usage Details</div>
+                      <div class="back-detail">
+                        <ul>
+                          <li><code>search.list</code> &rarr; find videos by topic (100 units each)</li>
+                          <li><code>videos.list</code> &rarr; durations, views, descriptions (3 units each)</li>
+                          <li>Transcript fallback: yt-dlp / youtube-transcript-api</li>
+                          <li>Blocked on datacenter IPs &rarr; falls back to descriptions</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5b: Neon PostgreSQL -->
+        <div class="tier-band tier-apis" style="flex:1;min-width:220px">
+          <div class="tier-header" onclick="toggleTier(this)">
+            <span class="tier-label">Tier 5b &mdash; Neon PostgreSQL</span>
+            <svg class="tier-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="tier-body">
+            <div class="cards-grid">
+              <div class="flip-card wide" onclick="flipCard(this)">
+                <div class="flip-card-inner" style="min-height:220px">
+                  <div class="flip-front">
+                    <div class="card-strip"><span class="card-strip-label">Neon Serverless Postgres</span><span class="card-strip-icon">&#x1F5C4;&#xFE0F;</span><span class="flip-hint">click to flip</span></div>
+                    <div class="card-content">
+                      <div class="card-title">Neon Serverless Postgres</div>
+                      <div class="card-sub">
+                        Host: <code>us-east-1.aws.neon.tech</code><br>
+                        Connection: <strong>SSL required</strong> &middot; pooled<br><br>
+                        <strong>Table:</strong> <code>visitor_count</code><br>
+                        &nbsp;id (int) &middot; count (int)<br>
+                        &nbsp;Auto-created on server start<br>
+                        &nbsp;Seeded at 100 if empty
+                      </div>
+                      <span class="node-tag tag-teal">Database &middot; Serverless</span>
+                    </div>
+                  </div>
+                  <div class="flip-back">
+                    <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                    <div class="card-content">
+                      <div class="back-title">Database Schema</div>
+                      <div class="back-detail">
+                        <ul>
+                          <li>Columns: <code>id</code> (int), <code>count</code> (int)</li>
+                          <li>Auto-created on server start</li>
+                          <li>Seeded at 100 if table is empty</li>
+                          <li>SSL required for all connections</li>
+                          <li>Connection pooling enabled</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5c: Anthropic Claude API -->
+        <div class="tier-band tier-apis" style="flex:1;min-width:220px">
+          <div class="tier-header" onclick="toggleTier(this)">
+            <span class="tier-label">Tier 5c &mdash; Anthropic Claude API</span>
+            <svg class="tier-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="tier-body">
+            <div class="cards-grid">
+              <div class="flip-card wide" onclick="flipCard(this)">
+                <div class="flip-card-inner" style="min-height:220px">
+                  <div class="flip-front">
+                    <div class="card-strip"><span class="card-strip-label">Claude Opus 4.6</span><span class="card-strip-icon">&#x1F916;</span><span class="flip-hint">click to flip</span></div>
+                    <div class="card-content">
+                      <div class="card-title">Claude Opus 4.6</div>
+                      <div class="card-sub">
+                        Model: <code style="color:var(--accent-purple)">claude-opus-4-6</code><br>
+                        Endpoint: <code style="color:var(--accent-purple)">api.anthropic.com/v1/messages</code><br><br>
+                        <strong>Image Analyzer:</strong> 1,024 tokens<br>
+                        <strong>Video Research:</strong> 4,096 tokens<br>
+                        <strong>Super Summary:</strong> 2,048 tokens
+                      </div>
+                      <span class="node-tag tag-purple">Vision &middot; LLM &middot; Summarization</span>
+                    </div>
+                  </div>
+                  <div class="flip-back">
+                    <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                    <div class="card-content">
+                      <div class="back-title">Model Usage Breakdown</div>
+                      <div class="back-detail">
+                        <ul>
+                          <li><strong>Image Analyzer:</strong> 1,024 max tokens<br>Input: base64 image + prompt &rarr; analysis</li>
+                          <li><strong>Video Research:</strong> 4,096 max tokens<br>Input: transcripts/descriptions &rarr; bullet summaries</li>
+                          <li><strong>Super Summary:</strong> 2,048 max tokens<br>Input: all bullet summaries &rarr; consolidated overview</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Spacer -->
+    <div style="height:36px"></div>
+
+    <!-- ════════════════════════════════════════════════════════
+         TIER 6: DEV WORKFLOW
+    ════════════════════════════════════════════════════════ -->
+    <div class="tier-section fade-in" id="tier-6">
+      <div class="tier-band tier-dev">
+        <div class="tier-header" onclick="toggleTier(this)">
+          <span class="tier-label">Tier 6 &mdash; Developer Workflow &middot; Claude Code &amp; MCP Integration</span>
+          <svg class="tier-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="tier-body">
+          <div class="split">
+            <div class="split-left">
+              <div class="section-title">Claude Code Tooling (.claude/)</div>
+              <div class="cards-grid">
+
+                <!-- launch.json -->
+                <div class="flip-card" onclick="flipCard(this)">
+                  <div class="flip-card-inner">
+                    <div class="flip-front">
+                      <div class="card-strip"><span class="card-strip-label">launch.json</span><span class="card-strip-icon">&#x1F680;</span><span class="flip-hint">click to flip</span></div>
+                      <div class="card-content">
+                        <div class="card-title">Dev Server Config</div>
+                        <div class="card-sub">
+                          <strong>personal-site:</strong> python3 -m http.server 3000<br>
+                          <strong>image-analyzer:</strong> python3 server.py :8788<br>
+                          Claude Code auto-starts/stops these dev servers
+                        </div>
+                        <span class="node-tag tag-yellow">Dev Server Config</span>
+                      </div>
+                    </div>
+                    <div class="flip-back">
+                      <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                      <div class="card-content">
+                        <div class="back-detail">
+                          <ul>
+                            <li>MCP-readable server configuration</li>
+                            <li>Claude Code reads this to spin up local dev environments</li>
+                            <li>No manual CLI required</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- settings.local.json -->
+                <div class="flip-card" onclick="flipCard(this)">
+                  <div class="flip-card-inner">
+                    <div class="flip-front">
+                      <div class="card-strip"><span class="card-strip-label">settings.local.json</span><span class="card-strip-icon">&#x1F510;</span><span class="flip-hint">click to flip</span></div>
+                      <div class="card-content">
+                        <div class="card-title">Permissions</div>
+                        <div class="card-sub">Allowlist of permitted shell commands &amp; URLs for Claude automation: git, GitHub API, npm, fetch, ping</div>
+                        <span class="node-tag tag-yellow">Permissions</span>
+                      </div>
+                    </div>
+                    <div class="flip-back">
+                      <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                      <div class="card-content">
+                        <div class="back-detail">
+                          <ul>
+                            <li>Scoped: git, GitHub API, npm, fetch, ping</li>
+                            <li>Controls which external domains agents may call</li>
+                            <li>GitHub, Render health checks, CDN pings</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+            <div class="split-right">
+              <div class="section-title">MCP &mdash; Model Context Protocol Usage</div>
+              <div class="mcp-box">
+                <strong>How MCP is used in this project:</strong>
+                <ul>
+                  <li><strong>Claude Preview MCP</strong> &mdash; <code style="font-size:0.58rem">preview_start / preview_screenshot / preview_snapshot</code> tools run the dev servers, navigate the live site, and capture visual proof of changes</li>
+                  <li><strong>Claude in Chrome MCP</strong> &mdash; browser automation, screenshot verification, DOM inspection during development</li>
+                  <li><strong>Scheduled Tasks MCP</strong> &mdash; ad-hoc task scheduling wired into Claude Code sessions</li>
+                  <li><strong>MCP Registry</strong> &mdash; connector discovery (search / suggest) for third-party integrations</li>
+                  <li><strong>settings.local.json allowlist</strong> &mdash; scopes which external domains / shell commands Claude Code agents may call</li>
+                  <li><strong>launch.json</strong> &mdash; MCP-readable server config; Claude Code reads this to know how to spin up local dev environments without manual CLI</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Git / CI pipeline row -->
+          <div style="margin-top:20px">
+            <div class="section-title">Source Control &amp; Deployment Pipeline</div>
+            <div class="hflow">
+              <div class="pipeline-node">
+                <div class="node-icon">&#x1F4BB;</div>
+                <div class="node-title">Local Dev</div>
+                <div class="node-sub">Claude Code CLI, preview_start servers, MCP tools</div>
+                <span class="node-tag tag-yellow">Dev</span>
+              </div>
+              <div class="hconnector">
+                <div class="hline"></div>
+                <span class="hlabel">git push</span>
+                <div class="hline"></div>
+                <svg fill="var(--accent)" width="8" height="6" viewBox="0 0 8 6" style="filter:drop-shadow(0 0 3px var(--accent))"><polygon points="8,3 0,0 0,6"/></svg>
+              </div>
+              <div class="pipeline-node">
+                <div class="node-icon">&#x1F419;</div>
+                <div class="node-title">GitHub</div>
+                <div class="node-sub">Repo branch: main &middot; git log + blame</div>
+                <span class="node-tag tag-blue">VCS</span>
+              </div>
+              <div class="hconnector">
+                <div class="hline"></div>
+                <span class="hlabel">auto-deploy</span>
+                <div class="hline"></div>
+                <svg fill="var(--accent)" width="8" height="6" viewBox="0 0 8 6" style="filter:drop-shadow(0 0 3px var(--accent))"><polygon points="8,3 0,0 0,6"/></svg>
+              </div>
+              <div class="pipeline-node">
+                <div class="node-icon">&#x1F4C4;</div>
+                <div class="node-title">GitHub Pages</div>
+                <div class="node-sub">Static site live at www.alwinthomas.click on push to main</div>
+                <span class="node-tag tag-green">Hosting</span>
+              </div>
+              <div class="hconnector">
+                <div class="hline"></div>
+                <span class="hlabel">manual deploy</span>
+                <div class="hline"></div>
+                <svg fill="var(--accent)" width="8" height="6" viewBox="0 0 8 6" style="filter:drop-shadow(0 0 3px var(--accent))"><polygon points="8,3 0,0 0,6"/></svg>
+              </div>
+              <div class="pipeline-node">
+                <div class="node-icon">&#x2699;&#xFE0F;</div>
+                <div class="node-title">Render.com</div>
+                <div class="node-sub">Python server.py &middot; Web Service</div>
+                <span class="node-tag tag-orange">Backend Hosting</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         LEGEND
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-line" style="background:repeating-linear-gradient(to right,var(--border-bright) 0,var(--border-bright) 6px,transparent 6px,transparent 12px)"></div>
+        <span>HTTPS / Data Flow</span>
+      </div>
+      <div class="legend-item">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)"></div>
+        <span>Animated Data Dot</span>
+      </div>
+      <div class="legend-item"><span class="node-tag tag-green" style="margin:0">Static Page</span><span style="margin-left:6px">GitHub Pages hosted</span></div>
+      <div class="legend-item"><span class="node-tag tag-orange" style="margin:0">Python Server</span><span style="margin-left:6px">Render.com hosted</span></div>
+      <div class="legend-item"><span class="node-tag tag-purple" style="margin:0">Claude API</span><span style="margin-left:6px">Anthropic cloud</span></div>
+      <div class="legend-item"><span class="node-tag tag-yellow" style="margin:0">MCP / Dev</span><span style="margin-left:6px">Claude Code tooling</span></div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════════════════════ -->
 <script>
-  // Navigation
+  // ── Navigation Drawer ──────────────────────────────────
   const hamburgerBtn = document.getElementById('hamburger');
+  const pagesBtn     = document.getElementById('pages-btn');
   const navDrawer    = document.getElementById('nav-drawer');
   const navOverlay   = document.getElementById('nav-overlay');
   const navClose     = document.getElementById('nav-close');
-  function openNav() { navDrawer.classList.add('open'); navOverlay.classList.add('open'); hamburgerBtn.setAttribute('aria-expanded','true'); navDrawer.setAttribute('aria-hidden','false'); }
-  function closeNav() { navDrawer.classList.remove('open'); navOverlay.classList.remove('open'); hamburgerBtn.setAttribute('aria-expanded','false'); navDrawer.setAttribute('aria-hidden','true'); }
-  hamburgerBtn.addEventListener('click', openNav);
+
+  function openNav() { navDrawer.classList.add('open'); navOverlay.classList.add('open'); }
+  function closeNav() { navDrawer.classList.remove('open'); navOverlay.classList.remove('open'); }
+  pagesBtn.addEventListener('click', openNav);
   navClose.addEventListener('click', closeNav);
   navOverlay.addEventListener('click', closeNav);
 
-  // Theme — default dark
-  const root = document.documentElement;
-  const toggleBtn = document.getElementById('theme-toggle');
-  const saved = localStorage.getItem('theme');
-  if (saved) root.setAttribute('data-theme', saved);
-  toggleBtn.addEventListener('click', () => {
-    const isLight = root.getAttribute('data-theme') === 'light';
-    const next = isLight ? '' : 'light';
-    if (next) root.setAttribute('data-theme', next);
-    else root.removeAttribute('data-theme');
-    localStorage.setItem('theme', next || 'dark');
+  // Mobile hamburger opens sidebar on small screens
+  const sidebar = document.getElementById('sidebar');
+  hamburgerBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('mobile-open');
+    if (sidebar.classList.contains('mobile-open')) {
+      navOverlay.classList.add('open');
+    } else {
+      navOverlay.classList.remove('open');
+    }
+  });
+  navOverlay.addEventListener('click', () => {
+    sidebar.classList.remove('mobile-open');
   });
 
-  // ── Star cursor + Particle trail ──────────────────────────
+  // ── Theme Toggle ────────────────────────────────────────
+  const root = document.documentElement;
+  const themeBtn = document.getElementById('theme-toggle');
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'light') root.setAttribute('data-theme', 'light');
+
+  themeBtn.addEventListener('click', () => {
+    const isLight = root.getAttribute('data-theme') === 'light';
+    if (isLight) {
+      root.removeAttribute('data-theme');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      root.setAttribute('data-theme', 'light');
+      localStorage.setItem('theme', 'light');
+    }
+  });
+
+  // ── Collapsible Tiers ──────────────────────────────────
+  function toggleTier(headerEl) {
+    const band = headerEl.closest('.tier-band');
+    band.classList.toggle('collapsed');
+  }
+
+  // ── Card Flip ───────────────────────────────────────────
+  function flipCard(el) {
+    el.classList.toggle('flipped');
+  }
+
+  // ── Sidebar Active State + Scroll Spy ──────────────────
+  const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
+  const tierSections = document.querySelectorAll('.tier-section');
+  const minimapBlocks = document.querySelectorAll('.minimap-block');
+  const minimapViewport = document.getElementById('minimap-viewport');
+
+  function updateActiveSection() {
+    const scrollY = window.scrollY + 120;
+    let activeId = '';
+
+    tierSections.forEach(section => {
+      const top = section.offsetTop;
+      const bottom = top + section.offsetHeight;
+      if (scrollY >= top && scrollY < bottom) {
+        activeId = section.id;
+      }
+    });
+
+    // Update sidebar
+    sidebarLinks.forEach(link => {
+      link.classList.toggle('active', link.getAttribute('data-tier') === activeId);
+    });
+
+    // Update minimap blocks
+    const tierIds = ['tier-1','tier-2','tier-3','tier-4','tier-5','tier-6'];
+    tierIds.forEach((id, i) => {
+      const block = document.getElementById('mm-' + (i + 1));
+      if (block) block.classList.toggle('active', id === activeId);
+    });
+
+    // Update minimap viewport indicator
+    const docHeight = document.documentElement.scrollHeight;
+    const viewHeight = window.innerHeight;
+    const scrollTop = window.scrollY;
+    const trackHeight = 140;
+    const vpTop = (scrollTop / docHeight) * trackHeight;
+    const vpHeight = (viewHeight / docHeight) * trackHeight;
+    if (minimapViewport) {
+      minimapViewport.style.top = vpTop + 'px';
+      minimapViewport.style.height = Math.max(vpHeight, 10) + 'px';
+    }
+  }
+
+  window.addEventListener('scroll', updateActiveSection, { passive: true });
+  updateActiveSection();
+
+  // Smooth scroll from sidebar
+  sidebarLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.querySelector(link.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      sidebar.classList.remove('mobile-open');
+      navOverlay.classList.remove('open');
+    });
+  });
+
+  // ── Scroll-triggered fade-in (IntersectionObserver) ────
+  const fadeEls = document.querySelectorAll('.fade-in');
+  const fadeObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+  fadeEls.forEach(el => fadeObserver.observe(el));
+
+  // ── Star Cursor + Particle Trail ────────────────────────
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-    const darkColors  = ['#818cf8','#38bdf8','#34d399','#f472b6','#fb923c'];
-    const lightColors = ['#6366f1','#0ea5e9','#10b981','#ec4899','#f97316'];
+    const darkColors  = ['#64ffda','#38bdf8','#34d399','#818cf8','#f472b6'];
+    const lightColors = ['#0fa68a','#0ea5e9','#10b981','#6366f1','#ec4899'];
     const star = document.createElement('div');
     star.id = 'star-cursor';
-    star.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z"
-        fill="#6366f1" stroke="#6366f1" stroke-width="0.5" stroke-linejoin="round"/></svg>`;
+    star.innerHTML = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z" fill="#64ffda" stroke="#64ffda" stroke-width="0.5" stroke-linejoin="round"/></svg>';
     document.body.appendChild(star);
     let spinTimer = null;
     document.addEventListener('mousemove', (e) => {
@@ -608,410 +2170,17 @@
       const dx = e.clientX - lastX, dy = e.clientY - lastY;
       if (Math.sqrt(dx*dx + dy*dy) < 12) return;
       lastX = e.clientX; lastY = e.clientY;
-      const isDark = root.getAttribute('data-theme') === 'dark';
+      const isDark = root.getAttribute('data-theme') !== 'light';
       const colors = isDark ? darkColors : lightColors;
       const dot = document.createElement('div');
       dot.className = 'trail-particle';
       const size = Math.random() * 6 + 4;
-      dot.style.cssText = `width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};left:${e.clientX}px;top:${e.clientY}px;opacity:${isDark?0.85:0.7}`;
+      dot.style.cssText = 'width:'+size+'px;height:'+size+'px;background:'+colors[Math.floor(Math.random()*colors.length)]+';left:'+e.clientX+'px;top:'+e.clientY+'px;opacity:'+(isDark?0.85:0.7);
       document.body.appendChild(dot);
       dot.addEventListener('animationend', () => dot.remove());
     });
   }
 </script>
 
-<div class="header">
-  <h1>Architecture View</h1>
-  <p>Full-stack portfolio site: static frontend + AI-powered backend</p>
-  <div class="badge">March 2026</div>
-</div>
-
-<div class="diagram">
-
-  <!-- ══════════════════════════════════════════
-       TIER 1: CLIENT
-  ══════════════════════════════════════════ -->
-  <div class="zone zone-client">
-    <span class="zone-label">Tier 1 — User / Client</span>
-    <div class="nodes">
-      <div class="node">
-        <div class="node-icon">🌐</div>
-        <div class="node-title">Web Browser</div>
-        <div class="node-sub">Desktop &amp; Mobile<br>HTTPS requests, File API, Canvas API, Fetch API</div>
-        <span class="node-tag tag-blue">End User</span>
-      </div>
-      <div class="node">
-        <div class="node-icon">📱</div>
-        <div class="node-title">Mobile Browser</div>
-        <div class="node-sub">Responsive layout (≤520 px breakpoint), touch-optimised, viewport meta</div>
-        <span class="node-tag tag-blue">End User</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- connector -->
-  <div class="connector">
-    <div class="line"></div>
-    <span class="label https">HTTPS &nbsp;www.alwinthomas.click</span>
-    <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
-  </div>
-
-  <!-- ══════════════════════════════════════════
-       TIER 2: DNS / EDGE
-  ══════════════════════════════════════════ -->
-  <div class="zone zone-edge">
-    <span class="zone-label">Tier 2 — DNS &amp; Edge / CDN</span>
-    <div class="split">
-      <div class="split-left">
-        <div class="section-title">Domain &amp; DNS</div>
-        <div class="nodes" style="justify-content:flex-start">
-          <div class="node">
-            <div class="node-icon">🔖</div>
-            <div class="node-title">alwinthomas.click</div>
-            <div class="node-sub">Custom domain registered externally. CNAME file in repo:<br><code style="font-size:0.68rem;color:var(--accent-teal)">www.alwinthomas.click</code></div>
-            <span class="node-tag tag-teal">DNS · CNAME</span>
-          </div>
-          <div class="node">
-            <div class="node-icon">🔒</div>
-            <div class="node-title">GitHub Pages CDN</div>
-            <div class="node-sub">Auto-HTTPS (TLS provisioned by GitHub). Global CDN edge delivery. Resolves CNAME → Pages IP</div>
-            <span class="node-tag tag-blue">CDN · HTTPS</span>
-          </div>
-        </div>
-      </div>
-      <div class="split-right">
-        <div class="section-title">Traffic routing</div>
-        <div class="mcp-box" style="border-color:rgba(88,166,255,.3);background:rgba(88,166,255,.05)">
-          <strong style="color:var(--accent-blue)">Flow:</strong><br>
-          Browser DNS lookup → <strong style="color:var(--accent-teal)">www.alwinthomas.click</strong><br>
-          → CNAME resolves to <strong style="color:var(--accent-blue)">GitHub Pages</strong> CDN nodes<br>
-          → TLS terminated at edge<br>
-          → Static assets served from CDN cache<br>
-          → Dynamic AI calls bypass CDN → Render
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- connector -->
-  <div class="connector">
-    <div class="line"></div>
-    <span class="label https">Serves static files from repo branch: main</span>
-    <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
-  </div>
-
-  <!-- ══════════════════════════════════════════
-       TIER 3: FRONTEND — GitHub Pages
-  ══════════════════════════════════════════ -->
-  <div class="zone zone-frontend">
-    <span class="zone-label">Tier 3 — Frontend · GitHub Pages (Static Hosting)</span>
-    <div class="nodes">
-      <div class="node">
-        <div class="node-icon">🏠</div>
-        <div class="node-title">index.html</div>
-        <div class="node-sub">Portfolio homepage. Bio, skills, projects. Formspree contact form (POST /f/mvzbjenk). Visitor counter (cross-origin fetch → Render /visitor-count)</div>
-        <span class="node-tag tag-green">Static Page</span>
-      </div>
-      <div class="node">
-        <div class="node-icon">🖼️</div>
-        <div class="node-title">image-analyzer.html</div>
-        <div class="node-sub">AI image analysis tool. File upload, drag-drop, canvas resize. Calls Render backend /analyze</div>
-        <span class="node-tag tag-orange">AI Feature</span>
-      </div>
-      <div class="node">
-        <div class="node-icon">🎵</div>
-        <div class="node-title">music.html</div>
-        <div class="node-sub">Mood-based music streaming app. Embedded player, playlist logic</div>
-        <span class="node-tag tag-green">Static Page</span>
-      </div>
-      <div class="node">
-        <div class="node-icon">🔬</div>
-        <div class="node-title">research.html</div>
-        <div class="node-sub">Video Research Center. Topic search, YouTube video discovery, AI-powered transcript/description summarization. Calls Render backend /research &amp; /super-summary</div>
-        <span class="node-tag tag-orange">AI Feature</span>
-      </div>
-      <div class="node">
-        <div class="node-icon">🧩</div>
-        <div class="node-title">sudoku.html</div>
-        <div class="node-sub">Interactive Sudoku game. Pure JS client-side logic, no backend dependency</div>
-        <span class="node-tag tag-green">Static Page</span>
-      </div>
-      <div class="node">
-        <div class="node-icon">🎨</div>
-        <div class="node-title">style.css</div>
-        <div class="node-sub">Shared design system. CSS variables, dark/light theme toggle, responsive breakpoints</div>
-        <span class="node-tag tag-green">Shared Asset</span>
-      </div>
-    </div>
-    <div class="info-row">
-      <div class="info-chip"><div class="dot dot-green"></div> Repo: w3bslinga/ClaudeCodeProject · branch: main</div>
-      <div class="info-chip"><div class="dot dot-blue"></div> Theme: CSS variables + data-theme, LocalStorage persistence</div>
-      <div class="info-chip"><div class="dot dot-orange"></div> Image resize: Canvas API client-side before upload (≤5 MB base64)</div>
-      <div class="info-chip"><div class="dot dot-orange"></div> Video Research: sticky search, fireball Super Summary, video modal player</div>
-    </div>
-  </div>
-
-  <!-- two-way connectors row -->
-  <div style="display:flex;justify-content:center;align-items:flex-start;gap:80px">
-    <!-- left: Formspree -->
-    <div class="connector" style="flex:1;max-width:220px">
-      <div class="line dashed"></div>
-      <span class="label https">POST contact form</span>
-      <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
-      <div style="font-size:0.68rem;color:var(--muted);margin-top:4px;text-align:center">Formspree<br><code style="font-size:0.62rem;color:var(--accent-teal)">formspree.io/f/mvzbjenk</code></div>
-    </div>
-    <!-- right: Render backend -->
-    <div class="connector" style="flex:1;max-width:320px">
-      <div class="line"></div>
-      <span class="label https">POST /analyze · /research · /super-summary · GET /visitor-count · CORS</span>
-      <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
-    </div>
-  </div>
-
-  <!-- ══════════════════════════════════════════
-       TIER 4: BACKEND — Render
-  ══════════════════════════════════════════ -->
-  <div class="zone zone-backend" style="margin-left:auto;width:60%;min-width:320px">
-    <span class="zone-label">Tier 4 — Backend · Render.com (Python Server)</span>
-    <div class="nodes">
-      <div class="node" style="max-width:100%">
-        <div class="node-icon">🐍</div>
-        <div class="node-title">server.py — Python HTTP Proxy</div>
-        <div class="node-sub">
-          Endpoint: <code style="color:var(--accent-teal)">claudecodeproject.onrender.com</code><br>
-          Port: <strong>8788</strong>&nbsp;·&nbsp;60s timeout (120s for research)<br><br>
-          <strong>Routes:</strong><br>
-          &nbsp;POST <code>/analyze</code> → validate → moderate → forward to Claude API<br>
-          &nbsp;POST <code>/chat</code> → follow-up conversation with image context<br>
-          &nbsp;POST <code>/research</code> → YouTube search → fetch transcripts/descriptions → Claude summarization<br>
-          &nbsp;POST <code>/super-summary</code> → consolidate all video summaries into one overview<br>
-          &nbsp;GET  <code>/visitor-count</code> → increment &amp; return visitor count from Neon PostgreSQL<br>
-          &nbsp;GET  <code>/*</code> → serve static files (dev)<br><br>
-          <strong>Responsibilities:</strong> CORS headers (GET/POST/OPTIONS), API key guard (env-only), input validation, image media-type check, content moderation, auto-resize fallback, JSON response
-        </div>
-        <span class="node-tag tag-orange">API Proxy · Python</span>
-      </div>
-    </div>
-    <div class="info-row">
-      <div class="info-chip"><div class="dot dot-orange"></div> CORS: Allow-Origin *, Methods: GET POST OPTIONS</div>
-      <div class="info-chip"><div class="dot dot-orange"></div> Env keys: ANTHROPIC_API_KEY · YOUTUBE_API_KEY · DATABASE_URL</div>
-      <div class="info-chip"><div class="dot dot-orange"></div> Accepted MIME: jpeg, png, gif, webp · limit 5 MB base64</div>
-      <div class="info-chip"><div class="dot dot-orange"></div> Deps: google-api-python-client, youtube-transcript-api, yt-dlp, psycopg2</div>
-    </div>
-  </div>
-
-  <!-- connectors to external APIs and DB -->
-  <div style="display:flex;justify-content:center;align-items:flex-start;gap:60px;width:60%;min-width:320px;margin-left:auto">
-    <!-- left: YouTube API -->
-    <div class="connector" style="flex:1;max-width:220px">
-      <div class="line"></div>
-      <span class="label api">YouTube Data API v3 · YOUTUBE_API_KEY</span>
-      <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
-    </div>
-    <!-- center: Neon DB -->
-    <div class="connector" style="flex:1;max-width:220px">
-      <div class="line"></div>
-      <span class="label api">PostgreSQL · DATABASE_URL · SSL</span>
-      <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
-    </div>
-    <!-- right: Anthropic API -->
-    <div class="connector" style="flex:1;max-width:220px">
-      <div class="line"></div>
-      <span class="label api">POST /v1/messages · ANTHROPIC_API_KEY</span>
-      <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
-    </div>
-  </div>
-
-  <!-- ══════════════════════════════════════════
-       TIER 5: EXTERNAL APIs
-  ══════════════════════════════════════════ -->
-  <div style="display:flex;gap:16px;width:60%;min-width:320px;margin-left:auto;flex-wrap:wrap">
-
-    <!-- YouTube Data API -->
-    <div class="zone zone-ai" style="flex:1;margin:0;min-width:200px">
-      <span class="zone-label">Tier 5a — YouTube Data API v3</span>
-      <div class="nodes">
-        <div class="node" style="max-width:100%">
-          <div class="node-icon">📺</div>
-          <div class="node-title">YouTube Data API v3</div>
-          <div class="node-sub">
-            Endpoint: <code style="color:var(--accent-red)">googleapis.com/youtube/v3</code><br>
-            Quota: <strong>10,000 units/day</strong><br><br>
-            <strong>Used by /research:</strong><br>
-            &nbsp;<code>search.list</code> → find videos by topic (100 units)<br>
-            &nbsp;<code>videos.list</code> → durations, views, descriptions (3 units)<br><br>
-            Transcript fallback: yt-dlp / youtube-transcript-api (blocked on datacenter IPs → uses descriptions)
-          </div>
-          <span class="node-tag tag-red">Video Search · Metadata</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Neon PostgreSQL -->
-    <div class="zone zone-ai" style="flex:1;margin:0;min-width:200px">
-      <span class="zone-label">Tier 5b — Neon PostgreSQL</span>
-      <div class="nodes">
-        <div class="node" style="max-width:100%">
-          <div class="node-icon">🗄️</div>
-          <div class="node-title">Neon Serverless Postgres</div>
-          <div class="node-sub">
-            Host: <code style="color:var(--accent-teal)">us-east-1.aws.neon.tech</code><br>
-            Connection: <strong>SSL required</strong> · pooled<br><br>
-            <strong>Table:</strong> <code>visitor_count</code><br>
-            &nbsp;id (int) · count (int)<br>
-            &nbsp;Auto-created on server start<br>
-            &nbsp;Seeded at 100 if empty
-          </div>
-          <span class="node-tag tag-teal">Database · Serverless</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Anthropic Claude API -->
-    <div class="zone zone-ai" style="flex:1;margin:0;min-width:200px">
-      <span class="zone-label">Tier 5c — Anthropic Claude API</span>
-      <div class="nodes">
-        <div class="node" style="max-width:100%">
-          <div class="node-icon">🤖</div>
-          <div class="node-title">Claude Opus 4.6</div>
-          <div class="node-sub">
-            Model: <code style="color:var(--accent-purple)">claude-opus-4-6</code><br>
-            Endpoint: <code style="color:var(--accent-purple)">api.anthropic.com/v1/messages</code><br><br>
-            <strong>Image Analyzer:</strong> 1,024 tokens<br>
-            &nbsp;Input: base64 image + prompt → analysis<br><br>
-            <strong>Video Research:</strong> 4,096 tokens<br>
-            &nbsp;Input: transcripts/descriptions → bullet summaries<br><br>
-            <strong>Super Summary:</strong> 2,048 tokens<br>
-            &nbsp;Input: all bullet summaries → consolidated overview
-          </div>
-          <span class="node-tag tag-purple">Vision · LLM · Summarization</span>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ══════════════════════════════════════════
-       TIER 6: DEVELOPER WORKFLOW — MCP
-  ══════════════════════════════════════════ -->
-  <div style="height:40px"></div>
-  <div class="zone zone-dev">
-    <span class="zone-label">Developer Workflow — Claude Code &amp; MCP Integration</span>
-    <div class="split">
-
-      <div class="split-left">
-        <div class="section-title">Claude Code tooling (.claude/)</div>
-        <div class="nodes" style="justify-content:flex-start">
-          <div class="node">
-            <div class="node-icon">🚀</div>
-            <div class="node-title">launch.json</div>
-            <div class="node-sub">
-              <strong>personal-site:</strong> python3 -m http.server 3000<br>
-              <strong>image-analyzer:</strong> python3 server.py :8788<br>
-              Claude Code auto-starts/stops these dev servers
-            </div>
-            <span class="node-tag tag-yellow">Dev Server Config</span>
-          </div>
-          <div class="node">
-            <div class="node-icon">🔐</div>
-            <div class="node-title">settings.local.json</div>
-            <div class="node-sub">
-              Allowlist of permitted shell commands &amp; URLs for Claude automation: git, GitHub API, npm, fetch, ping
-            </div>
-            <span class="node-tag tag-yellow">Permissions</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="split-right">
-        <div class="section-title">MCP — Model Context Protocol usage</div>
-        <div class="mcp-box">
-          <strong>How MCP is used in this project:</strong>
-          <ul>
-            <li><strong>Claude Preview MCP</strong> — <code>preview_start / preview_screenshot / preview_snapshot</code> tools run the dev servers, navigate the live site, and capture visual proof of changes</li>
-            <li><strong>Claude in Chrome MCP</strong> — browser automation, screenshot verification, DOM inspection during development</li>
-            <li><strong>Scheduled Tasks MCP</strong> — ad-hoc task scheduling wired into Claude Code sessions</li>
-            <li><strong>MCP Registry</strong> — connector discovery (search / suggest) for third-party integrations</li>
-            <li><strong>settings.local.json allowlist</strong> — scopes which external domains / shell commands Claude Code agents may call (GitHub, Render health checks, CDN pings)</li>
-            <li><strong>launch.json</strong> — MCP-readable server config; Claude Code reads this to know how to spin up local dev environments without manual CLI</li>
-          </ul>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Git / CI row -->
-    <div style="margin-top:20px">
-      <div class="section-title">Source Control &amp; Deployment Pipeline</div>
-      <div class="hflow">
-        <div class="node" style="max-width:160px">
-          <div class="node-icon">💻</div>
-          <div class="node-title">Local Dev</div>
-          <div class="node-sub">Claude Code CLI, preview_start servers, MCP tools</div>
-          <span class="node-tag tag-yellow">Dev</span>
-        </div>
-        <div class="hconnector">
-          <div class="hline"></div>
-          <span class="hlabel">git push</span>
-          <div class="hline"></div>
-          <svg fill="var(--border)" width="8" height="6" viewBox="0 0 8 6"><polygon points="8,3 0,0 0,6"/></svg>
-        </div>
-        <div class="node" style="max-width:160px">
-          <div class="node-icon">🐙</div>
-          <div class="node-title">GitHub</div>
-          <div class="node-sub">Repo: ClaudeCodeProject branch: main · git log + blame</div>
-          <span class="node-tag tag-blue">VCS</span>
-        </div>
-        <div class="hconnector">
-          <div class="hline"></div>
-          <span class="hlabel">auto-deploy</span>
-          <div class="hline"></div>
-          <svg fill="var(--border)" width="8" height="6" viewBox="0 0 8 6"><polygon points="8,3 0,0 0,6"/></svg>
-        </div>
-        <div class="node" style="max-width:160px">
-          <div class="node-icon">📄</div>
-          <div class="node-title">GitHub Pages</div>
-          <div class="node-sub">Static site live at www.alwinthomas.click on push to main</div>
-          <span class="node-tag tag-green">Hosting</span>
-        </div>
-        <div class="hconnector">
-          <div class="hline"></div>
-          <span class="hlabel">manual deploy</span>
-          <div class="hline"></div>
-          <svg fill="var(--border)" width="8" height="6" viewBox="0 0 8 6"><polygon points="8,3 0,0 0,6"/></svg>
-        </div>
-        <div class="node" style="max-width:160px">
-          <div class="node-icon">⚙️</div>
-          <div class="node-title">Render.com</div>
-          <div class="node-sub">Python server.py · Web Service · claudecodeproject.onrender.com</div>
-          <span class="node-tag tag-orange">Backend Hosting</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /diagram -->
-
-<!-- ══════════════════════════════════════════
-     LEGEND
-══════════════════════════════════════════ -->
-<div style="max-width:1100px;margin:0 auto">
-  <div class="legend">
-    <div class="legend-item">
-      <div class="legend-line" style="background:var(--border)"></div>
-      <span>HTTPS request</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-line" style="background:repeating-linear-gradient(to right,var(--border) 0,var(--border) 4px,transparent 4px,transparent 8px)"></div>
-      <span>Optional / 3rd-party call</span>
-    </div>
-    <div class="legend-item"><span class="node-tag tag-green" style="margin:0">Static Page</span><span style="margin-left:6px">GitHub Pages hosted</span></div>
-    <div class="legend-item"><span class="node-tag tag-orange" style="margin:0">Python Server</span><span style="margin-left:6px">Render.com hosted</span></div>
-    <div class="legend-item"><span class="node-tag tag-purple" style="margin:0">Claude API</span><span style="margin-left:6px">Anthropic cloud</span></div>
-    <div class="legend-item"><span class="node-tag tag-yellow" style="margin:0">MCP / Dev</span><span style="margin-left:6px">Claude Code tooling</span></div>
-  </div>
-</div>
-
-  <script src="cursor-halo.js"></script>
 </body>
 </html>
