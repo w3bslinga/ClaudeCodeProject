@@ -33,7 +33,12 @@ def get_db_connection():
     db_url = os.environ.get("DATABASE_URL")
     if not db_url:
         return None
-    return psycopg2.connect(db_url, sslmode="require")
+    # Parse URL to handle special chars in password
+    from urllib.parse import urlparse, quote
+    parsed = urlparse(db_url)
+    # Re-encode password to handle special characters
+    safe_url = f"postgresql://{quote(parsed.username or '', safe='')}:{quote(parsed.password or '', safe='')}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
+    return psycopg2.connect(safe_url, sslmode="require")
 
 
 def init_db():
