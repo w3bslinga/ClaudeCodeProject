@@ -39,6 +39,7 @@ body {
   color: var(--text);
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
@@ -525,7 +526,8 @@ textarea:focus {
   font-size: 0.7rem;
   color: var(--muted);
   opacity: 0.4;
-  margin-top: 1.5rem;
+  margin-top: auto;
+  padding-top: 2rem;
   padding-bottom: 1rem;
   letter-spacing: 0.05em;
 }
