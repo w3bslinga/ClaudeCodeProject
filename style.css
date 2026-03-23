@@ -340,6 +340,8 @@ textarea:focus {
   color: var(--muted);
   margin-top: 1rem;
   margin-bottom: 0.25rem;
+  text-align: center !important;
+  width: 100%;
 }
 
 .sudoku-link {
