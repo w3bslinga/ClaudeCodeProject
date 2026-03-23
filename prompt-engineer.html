@@ -466,11 +466,6 @@
           <button class="quick-btn" data-action="Add a persona or role to the prompt">👤 Add Persona</button>
           <button class="quick-btn" data-action="Make this more formal and professional">📋 Formal</button>
         </div>
-        <p class="refine-label" style="margin-top:0.5rem;">Or give a custom instruction:</p>
-        <div class="refine-row">
-          <input type="text" class="refine-input" id="refine-input" placeholder='e.g. "make it shorter", "add a persona", "more formal"' autocomplete="off" />
-          <button class="refine-btn" id="refine-btn">Refine</button>
-        </div>
         <p class="refined-notice" id="refined-notice">Prompt refined successfully!</p>
       </div>
     </div>
@@ -515,8 +510,6 @@
     const resultCode     = document.getElementById('result-code');
     const copyBtn        = document.getElementById('copy-btn');
     const refineSection  = document.getElementById('refine-section');
-    const refineInput    = document.getElementById('refine-input');
-    const refineBtn      = document.getElementById('refine-btn');
     const refinedNotice  = document.getElementById('refined-notice');
 
     const WORD_LIMIT = 250;
@@ -573,10 +566,6 @@
 
         // Show refine section and reset all buttons
         hasRefined = false;
-        refineInput.disabled = false;
-        refineBtn.disabled = false;
-        refineBtn.textContent = 'Refine';
-        refineInput.value = '';
         refinedNotice.classList.remove('visible');
         document.querySelectorAll('.quick-btn').forEach(b => {
           b.disabled = false;
@@ -598,32 +587,18 @@
       }
     }
 
-    // ── Refine ──────────────────────────────────────────────────
-    refineBtn.addEventListener('click', () => doRefine(refineInput.value.trim()));
-    refineInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); doRefine(refineInput.value.trim()); }
-    });
-
-    // Quick action buttons
+    // ── Quick action buttons ──────────────────────────────────
     document.querySelectorAll('.quick-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const action = btn.dataset.action;
         btn.disabled = true;
-        doRefine(action, btn);
+        doRefine(btn.dataset.action, btn);
       });
     });
 
     async function doRefine(instruction, triggerBtn) {
       if (!instruction) return;
 
-      // Disable custom refine during processing
-      refineBtn.disabled = true;
-      refineInput.disabled = true;
-      if (triggerBtn) {
-        triggerBtn.textContent = '⏳';
-      } else {
-        refineBtn.textContent = 'Refining...';
-      }
+      triggerBtn.textContent = '⏳';
       refinedNotice.classList.remove('visible');
 
       try {
@@ -642,14 +617,7 @@
         currentEngineeredPrompt = data.result || data.engineered || '';
         resultCode.textContent = currentEngineeredPrompt;
 
-        if (triggerBtn) {
-          triggerBtn.textContent = '✓ Done';
-        } else {
-          hasRefined = true;
-          refineInput.disabled = true;
-          refineBtn.disabled = true;
-          refineBtn.textContent = 'Refined';
-        }
+        triggerBtn.textContent = '✓ Done';
         refinedNotice.textContent = 'Prompt refined successfully!';
         refinedNotice.style.color = 'var(--success)';
         refinedNotice.classList.add('visible');
@@ -657,20 +625,9 @@
         refinedNotice.textContent = err.message;
         refinedNotice.style.color = 'var(--error)';
         refinedNotice.classList.add('visible');
-        if (triggerBtn) {
-          triggerBtn.disabled = false;
-          triggerBtn.textContent = triggerBtn.dataset.action.includes('shorter') ? '✂️ Shorter'
-            : triggerBtn.dataset.action.includes('persona') ? '👤 Add Persona' : '📋 Formal';
-        }
-      } finally {
-        // Re-enable custom refine if not used yet
-        if (!hasRefined && !triggerBtn) {
-          refineBtn.textContent = 'Refine';
-        }
-        if (!hasRefined) {
-          refineInput.disabled = false;
-          refineBtn.disabled = false;
-        }
+        triggerBtn.disabled = false;
+        triggerBtn.textContent = triggerBtn.dataset.action.includes('shorter') ? '✂️ Shorter'
+          : triggerBtn.dataset.action.includes('persona') ? '👤 Add Persona' : '📋 Formal';
       }
     }
 

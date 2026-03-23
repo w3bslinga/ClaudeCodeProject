@@ -990,7 +990,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         prompt = body.get("prompt", "").strip()
         engineered = body.get("engineered", "").strip()
-        refinement = body.get("refinement", "").strip()
+        refinement = (body.get("refinement", "") or body.get("refine", "")).strip()
 
         if not prompt:
             self._json_error(400, "No prompt provided")
