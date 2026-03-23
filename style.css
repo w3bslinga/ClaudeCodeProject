@@ -107,15 +107,40 @@ body {
   text-align: center;
 }
 
-/* Avatar */
-.avatar-wrap {
-  width: 100px;
-  height: 100px;
+/* Avatar with spinning rainbow ring */
+.avatar-ring {
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
-  overflow: hidden;
-  border: 3px solid var(--border);
   margin-bottom: 1.25rem;
   flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    #ff0000, #ff8000, #ffff00, #00ff00,
+    #00ffff, #0080ff, #8000ff, #ff00ff, #ff0000
+  );
+  animation: spin-ring 3s linear infinite;
+  box-shadow: 0 0 15px rgba(255, 100, 0, 0.4), 0 0 30px rgba(0, 150, 255, 0.2);
+}
+
+.avatar-wrap {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .avatar {
@@ -123,6 +148,11 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: 50%;
+}
+
+@keyframes spin-ring {
+  to { transform: rotate(360deg); }
 }
 
 /* Name & role */
