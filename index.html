@@ -275,18 +275,38 @@
         btn.textContent = 'Send message';
       }
     });
-    // ── Visitor counter ─────────────────────────────────────
-    const vcBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? 'http://localhost:8788' : 'https://claudecodeproject.onrender.com';
-    fetch(vcBase + '/visitor-count')
-      .then(r => r.json())
-      .then(data => {
-        if (data.count != null) {
-          document.getElementById('visitor-counter').textContent =
-            String(data.count).padStart(6, '0').split('').join(' ');
-        }
-      })
-      .catch(() => {});
+  </script>
+  <script>
+    // ── Visitor counter (retries on cold-start 404) ──
+    (function () {
+      const vcBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:8788' : 'https://claudecodeproject.onrender.com';
+      const url = vcBase + '/visitor-count';
+      const maxRetries = 3;
+
+      function loadCount(attempt) {
+        fetch(url)
+          .then(r => {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          })
+          .then(data => {
+            if (data.count != null) {
+              document.getElementById('visitor-counter').textContent =
+                String(data.count).padStart(6, '0').split('').join(' ');
+            }
+          })
+          .catch(err => {
+            if (attempt < maxRetries) {
+              console.warn('Visitor counter attempt ' + attempt + ' failed, retrying in 3s...', err);
+              setTimeout(() => loadCount(attempt + 1), 3000);
+            } else {
+              console.warn('Visitor counter failed after ' + maxRetries + ' attempts:', err);
+            }
+          });
+      }
+      loadCount(1);
+    })();
   </script>
 </body>
 </html>
