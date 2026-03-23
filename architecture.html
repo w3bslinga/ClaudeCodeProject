@@ -709,7 +709,7 @@
       <div class="node">
         <div class="node-icon">🏠</div>
         <div class="node-title">index.html</div>
-        <div class="node-sub">Portfolio homepage. Bio, skills, projects. Formspree contact form (POST /f/mvzbjenk)</div>
+        <div class="node-sub">Portfolio homepage. Bio, skills, projects. Formspree contact form (POST /f/mvzbjenk). Visitor counter (cross-origin fetch → Render /visitor-count)</div>
         <span class="node-tag tag-green">Static Page</span>
       </div>
       <div class="node">
@@ -763,7 +763,7 @@
     <!-- right: Render backend -->
     <div class="connector" style="flex:1;max-width:320px">
       <div class="line"></div>
-      <span class="label https">POST /analyze · /research · /super-summary · HTTPS · CORS</span>
+      <span class="label https">POST /analyze · /research · /super-summary · GET /visitor-count · CORS</span>
       <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
     </div>
   </div>
@@ -785,30 +785,37 @@
           &nbsp;POST <code>/chat</code> → follow-up conversation with image context<br>
           &nbsp;POST <code>/research</code> → YouTube search → fetch transcripts/descriptions → Claude summarization<br>
           &nbsp;POST <code>/super-summary</code> → consolidate all video summaries into one overview<br>
+          &nbsp;GET  <code>/visitor-count</code> → increment &amp; return visitor count from Neon PostgreSQL<br>
           &nbsp;GET  <code>/*</code> → serve static files (dev)<br><br>
-          <strong>Responsibilities:</strong> CORS headers, API key guard (env-only), input validation, image media-type check, content moderation, auto-resize fallback, JSON response
+          <strong>Responsibilities:</strong> CORS headers (GET/POST/OPTIONS), API key guard (env-only), input validation, image media-type check, content moderation, auto-resize fallback, JSON response
         </div>
         <span class="node-tag tag-orange">API Proxy · Python</span>
       </div>
     </div>
     <div class="info-row">
-      <div class="info-chip"><div class="dot dot-orange"></div> CORS: Allow-Origin *, Methods: POST OPTIONS</div>
-      <div class="info-chip"><div class="dot dot-orange"></div> API keys read from env only — ANTHROPIC_API_KEY + YOUTUBE_API_KEY</div>
+      <div class="info-chip"><div class="dot dot-orange"></div> CORS: Allow-Origin *, Methods: GET POST OPTIONS</div>
+      <div class="info-chip"><div class="dot dot-orange"></div> Env keys: ANTHROPIC_API_KEY · YOUTUBE_API_KEY · DATABASE_URL</div>
       <div class="info-chip"><div class="dot dot-orange"></div> Accepted MIME: jpeg, png, gif, webp · limit 5 MB base64</div>
-      <div class="info-chip"><div class="dot dot-orange"></div> Deps: google-api-python-client, youtube-transcript-api, yt-dlp</div>
+      <div class="info-chip"><div class="dot dot-orange"></div> Deps: google-api-python-client, youtube-transcript-api, yt-dlp, psycopg2</div>
     </div>
   </div>
 
-  <!-- connectors to external APIs -->
-  <div style="display:flex;justify-content:center;align-items:flex-start;gap:80px;width:60%;min-width:320px;margin-left:auto">
+  <!-- connectors to external APIs and DB -->
+  <div style="display:flex;justify-content:center;align-items:flex-start;gap:60px;width:60%;min-width:320px;margin-left:auto">
     <!-- left: YouTube API -->
-    <div class="connector" style="flex:1;max-width:260px">
+    <div class="connector" style="flex:1;max-width:220px">
       <div class="line"></div>
       <span class="label api">YouTube Data API v3 · YOUTUBE_API_KEY</span>
       <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
     </div>
+    <!-- center: Neon DB -->
+    <div class="connector" style="flex:1;max-width:220px">
+      <div class="line"></div>
+      <span class="label api">PostgreSQL · DATABASE_URL · SSL</span>
+      <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
+    </div>
     <!-- right: Anthropic API -->
-    <div class="connector" style="flex:1;max-width:260px">
+    <div class="connector" style="flex:1;max-width:220px">
       <div class="line"></div>
       <span class="label api">POST /v1/messages · ANTHROPIC_API_KEY</span>
       <svg class="arrow" width="12" height="7" viewBox="0 0 12 7"><polygon points="6,7 0,0 12,0"/></svg>
@@ -818,10 +825,10 @@
   <!-- ══════════════════════════════════════════
        TIER 5: EXTERNAL APIs
   ══════════════════════════════════════════ -->
-  <div style="display:flex;gap:20px;width:60%;min-width:320px;margin-left:auto">
+  <div style="display:flex;gap:16px;width:60%;min-width:320px;margin-left:auto;flex-wrap:wrap">
 
     <!-- YouTube Data API -->
-    <div class="zone zone-ai" style="flex:1;margin:0">
+    <div class="zone zone-ai" style="flex:1;margin:0;min-width:200px">
       <span class="zone-label">Tier 5a — YouTube Data API v3</span>
       <div class="nodes">
         <div class="node" style="max-width:100%">
@@ -840,9 +847,29 @@
       </div>
     </div>
 
+    <!-- Neon PostgreSQL -->
+    <div class="zone zone-ai" style="flex:1;margin:0;min-width:200px">
+      <span class="zone-label">Tier 5b — Neon PostgreSQL</span>
+      <div class="nodes">
+        <div class="node" style="max-width:100%">
+          <div class="node-icon">🗄️</div>
+          <div class="node-title">Neon Serverless Postgres</div>
+          <div class="node-sub">
+            Host: <code style="color:var(--accent-teal)">us-east-1.aws.neon.tech</code><br>
+            Connection: <strong>SSL required</strong> · pooled<br><br>
+            <strong>Table:</strong> <code>visitor_count</code><br>
+            &nbsp;id (int) · count (int)<br>
+            &nbsp;Auto-created on server start<br>
+            &nbsp;Seeded at 100 if empty
+          </div>
+          <span class="node-tag tag-teal">Database · Serverless</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Anthropic Claude API -->
-    <div class="zone zone-ai" style="flex:1;margin:0">
-      <span class="zone-label">Tier 5b — Anthropic Claude API</span>
+    <div class="zone zone-ai" style="flex:1;margin:0;min-width:200px">
+      <span class="zone-label">Tier 5c — Anthropic Claude API</span>
       <div class="nodes">
         <div class="node" style="max-width:100%">
           <div class="node-icon">🤖</div>
