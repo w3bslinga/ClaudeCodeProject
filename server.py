@@ -49,7 +49,7 @@ def init_db():
                         CHECK (id = 1)
                     )
                 """)
-                cur.execute("INSERT INTO visitor_count (id, count) VALUES (1, 0) ON CONFLICT DO NOTHING")
+                cur.execute("INSERT INTO visitor_count (id, count) VALUES (1, 100) ON CONFLICT DO NOTHING")
                 conn.commit()
             print("  🗄️  Database: ✅ connected")
         except Exception as e:
