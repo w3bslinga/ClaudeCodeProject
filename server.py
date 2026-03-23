@@ -34,11 +34,15 @@ def get_db_connection():
     if not db_url:
         return None
     try:
-        # Parse URL to handle special chars in password
-        from urllib.parse import urlparse, quote
-        parsed = urlparse(db_url)
-        safe_url = f"postgresql://{quote(parsed.username or '', safe='')}:{quote(parsed.password or '', safe='')}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
-        return psycopg2.connect(safe_url, sslmode="require")
+        import re
+        # Extract parts manually to handle special chars in password (e.g. # ! %)
+        m = re.match(r'^postgresql://([^:]+):(.+)@([^/]+)/(.+)$', db_url)
+        if m:
+            user, pwd, host, dbpath = m.groups()
+            from urllib.parse import quote
+            safe_url = f"postgresql://{quote(user, safe='')}:{quote(pwd, safe='')}@{host}/{dbpath}"
+            return psycopg2.connect(safe_url)
+        return psycopg2.connect(db_url)
     except Exception as e:
         print(f"  ⚠️  DB connection failed: {e}")
         return None
