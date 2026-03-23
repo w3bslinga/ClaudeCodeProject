@@ -518,3 +518,14 @@ textarea:focus {
   0%   { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
   100% { opacity: 0;    transform: translate(-50%, calc(-50% - 18px)) scale(0.2); }
 }
+
+/* ── Visitor counter ──────────────────────────────────── */
+.visitor-counter {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--muted);
+  opacity: 0.4;
+  margin-top: 1.5rem;
+  padding-bottom: 1rem;
+  letter-spacing: 0.05em;
+}

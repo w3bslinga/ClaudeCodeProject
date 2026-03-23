@@ -157,6 +157,8 @@
     </section>
   </main>
 
+  <footer class="visitor-counter" id="visitor-counter"></footer>
+
   <script>
     // ── Dark mode ─────────────────────────────────────────────
     const root = document.documentElement;
@@ -273,6 +275,16 @@
         btn.textContent = 'Send message';
       }
     });
+    // ── Visitor counter ─────────────────────────────────────
+    fetch('/visitor-count')
+      .then(r => r.json())
+      .then(data => {
+        if (data.count != null) {
+          document.getElementById('visitor-counter').textContent =
+            `${data.count.toLocaleString()} visits`;
+        }
+      })
+      .catch(() => {});
   </script>
 </body>
 </html>

@@ -19,11 +19,45 @@ try:
     from googleapiclient.discovery import build as yt_build
     from youtube_transcript_api import YouTubeTranscriptApi
     import yt_dlp
+    import psycopg2
 except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
     from googleapiclient.discovery import build as yt_build
     from youtube_transcript_api import YouTubeTranscriptApi
     import yt_dlp
+    import psycopg2
+
+
+def get_db_connection():
+    """Get a PostgreSQL connection using DATABASE_URL, or None if unavailable."""
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        return None
+    return psycopg2.connect(db_url, sslmode="require")
+
+
+def init_db():
+    """Create the visitor_count table if it doesn't exist."""
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS visitor_count (
+                        id INTEGER PRIMARY KEY DEFAULT 1,
+                        count BIGINT NOT NULL DEFAULT 0,
+                        CHECK (id = 1)
+                    )
+                """)
+                cur.execute("INSERT INTO visitor_count (id, count) VALUES (1, 0) ON CONFLICT DO NOTHING")
+                conn.commit()
+            print("  🗄️  Database: ✅ connected")
+        except Exception as e:
+            print(f"  ⚠️  Database init failed: {e}")
+        finally:
+            conn.close()
+    else:
+        print("  ⚠️  DATABASE_URL not set (visitor counter disabled)")
 
 
 def load_dotenv(path=".env"):
@@ -55,8 +89,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        # Handle transcript proxy endpoint
-        if self.path.startswith("/transcript?"):
+        if self.path == "/visitor-count":
+            self._handle_visitor_count()
+        elif self.path.startswith("/transcript?"):
             self._handle_transcript()
         elif self.path.startswith("/debug-transcript?"):
             self._handle_debug_transcript()
@@ -1016,6 +1051,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self._json_error(500, str(e))
 
+    def _handle_visitor_count(self):
+        conn = get_db_connection()
+        if not conn:
+            self._json_ok({"count": None})
+            return
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE visitor_count SET count = count + 1 WHERE id = 1 RETURNING count"
+                )
+                count = cur.fetchone()[0]
+                conn.commit()
+            self._json_ok({"count": count})
+        except Exception as e:
+            print(f"  ❌ Visitor count error: {e}")
+            self._json_ok({"count": None})
+        finally:
+            conn.close()
+
     def _json_ok(self, data):
         body = json.dumps(data).encode()
         self.send_response(200)
@@ -1050,6 +1104,7 @@ if __name__ == "__main__":
         print("  ⚠️  YOUTUBE_API_KEY is not set (Research Center won't work)")
     else:
         print("  🔑 YouTube API key: ✅ ready")
+    init_db()
     print()
     server = http.server.HTTPServer(("", PORT), Handler)
     server.serve_forever()
