@@ -276,7 +276,9 @@
       }
     });
     // ── Visitor counter ─────────────────────────────────────
-    fetch('/visitor-count')
+    const vcBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:8788' : '';
+    fetch(vcBase + '/visitor-count')
       .then(r => r.json())
       .then(data => {
         if (data.count != null) {
