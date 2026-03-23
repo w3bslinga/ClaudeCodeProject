@@ -287,6 +287,22 @@
       display: none; font-size: 0.82rem; color: var(--success);
       margin-top: 0.5rem; font-weight: 500;
     }
+
+    .quick-actions {
+      display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;
+    }
+    .quick-btn {
+      padding: 0.4rem 0.85rem; border: 1.5px solid var(--border); border-radius: 20px;
+      background: var(--bg); color: var(--text);
+      font-size: 0.78rem; font-family: inherit; font-weight: 500;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .quick-btn:hover:not(:disabled) {
+      border-color: var(--accent); color: var(--accent); background: var(--drop-bg);
+    }
+    .quick-btn:disabled {
+      opacity: 0.4; cursor: not-allowed; border-color: var(--muted); color: var(--muted);
+    }
     .refined-notice.visible { display: block; }
 
     /* ── Responsive ── */
@@ -444,7 +460,13 @@
       <!-- Refine -->
       <div class="refine-section" id="refine-section">
         <div class="divider"></div>
-        <p class="refine-label">Want to tweak it? Give one refinement instruction:</p>
+        <p class="refine-label">Quick tweaks:</p>
+        <div class="quick-actions">
+          <button class="quick-btn" data-action="Make this shorter">✂️ Shorter</button>
+          <button class="quick-btn" data-action="Add a persona or role to the prompt">👤 Add Persona</button>
+          <button class="quick-btn" data-action="Make this more formal and professional">📋 Formal</button>
+        </div>
+        <p class="refine-label" style="margin-top:0.5rem;">Or give a custom instruction:</p>
         <div class="refine-row">
           <input type="text" class="refine-input" id="refine-input" placeholder='e.g. "make it shorter", "add a persona", "more formal"' autocomplete="off" />
           <button class="refine-btn" id="refine-btn">Refine</button>
@@ -549,12 +571,18 @@
         resultCode.textContent = currentEngineeredPrompt;
         resultsSection.classList.add('visible');
 
-        // Show refine section
+        // Show refine section and reset all buttons
         hasRefined = false;
         refineInput.disabled = false;
         refineBtn.disabled = false;
+        refineBtn.textContent = 'Refine';
         refineInput.value = '';
         refinedNotice.classList.remove('visible');
+        document.querySelectorAll('.quick-btn').forEach(b => {
+          b.disabled = false;
+          b.textContent = b.dataset.action.includes('shorter') ? '✂️ Shorter'
+            : b.dataset.action.includes('persona') ? '👤 Add Persona' : '📋 Formal';
+        });
         refineSection.classList.add('visible');
 
         resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -571,18 +599,32 @@
     }
 
     // ── Refine ──────────────────────────────────────────────────
-    refineBtn.addEventListener('click', refinePrompt);
+    refineBtn.addEventListener('click', () => doRefine(refineInput.value.trim()));
     refineInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); refinePrompt(); }
+      if (e.key === 'Enter') { e.preventDefault(); doRefine(refineInput.value.trim()); }
     });
 
-    async function refinePrompt() {
-      const instruction = refineInput.value.trim();
-      if (!instruction || hasRefined) return;
+    // Quick action buttons
+    document.querySelectorAll('.quick-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        btn.disabled = true;
+        doRefine(action, btn);
+      });
+    });
 
+    async function doRefine(instruction, triggerBtn) {
+      if (!instruction) return;
+
+      // Disable custom refine during processing
       refineBtn.disabled = true;
       refineInput.disabled = true;
-      refineBtn.textContent = 'Refining...';
+      if (triggerBtn) {
+        triggerBtn.textContent = '⏳';
+      } else {
+        refineBtn.textContent = 'Refining...';
+      }
+      refinedNotice.classList.remove('visible');
 
       try {
         const res = await fetch(`${API_BASE}/prompt-engineer`, {
@@ -600,19 +642,35 @@
         currentEngineeredPrompt = data.result || data.engineered || '';
         resultCode.textContent = currentEngineeredPrompt;
 
-        hasRefined = true;
-        refineInput.disabled = true;
-        refineBtn.disabled = true;
-        refineBtn.textContent = 'Refined';
+        if (triggerBtn) {
+          triggerBtn.textContent = '✓ Done';
+        } else {
+          hasRefined = true;
+          refineInput.disabled = true;
+          refineBtn.disabled = true;
+          refineBtn.textContent = 'Refined';
+        }
+        refinedNotice.textContent = 'Prompt refined successfully!';
+        refinedNotice.style.color = 'var(--success)';
         refinedNotice.classList.add('visible');
       } catch (err) {
         refinedNotice.textContent = err.message;
         refinedNotice.style.color = 'var(--error)';
         refinedNotice.classList.add('visible');
-        refineInput.disabled = false;
-        refineBtn.disabled = false;
+        if (triggerBtn) {
+          triggerBtn.disabled = false;
+          triggerBtn.textContent = triggerBtn.dataset.action.includes('shorter') ? '✂️ Shorter'
+            : triggerBtn.dataset.action.includes('persona') ? '👤 Add Persona' : '📋 Formal';
+        }
       } finally {
-        if (!hasRefined) refineBtn.textContent = 'Refine';
+        // Re-enable custom refine if not used yet
+        if (!hasRefined && !triggerBtn) {
+          refineBtn.textContent = 'Refine';
+        }
+        if (!hasRefined) {
+          refineInput.disabled = false;
+          refineBtn.disabled = false;
+        }
       }
     }
 
