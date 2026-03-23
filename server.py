@@ -35,13 +35,22 @@ def get_db_connection():
         return None
     try:
         import re
+        from urllib.parse import quote
         # Extract parts manually to handle special chars in password (e.g. # ! %)
-        m = re.match(r'^postgresql://([^:]+):(.+)@([^/]+)/(.+)$', db_url)
+        # Support both postgres:// and postgresql:// schemes
+        m = re.match(r'^postgres(?:ql)?://([^:]+):(.+)@([^/]+)/(.+)$', db_url)
         if m:
             user, pwd, host, dbpath = m.groups()
-            from urllib.parse import quote
+            # Neon requires SSL — ensure sslmode=require is present
+            if '?' not in dbpath:
+                dbpath += '?sslmode=require'
+            elif 'sslmode' not in dbpath:
+                dbpath += '&sslmode=require'
             safe_url = f"postgresql://{quote(user, safe='')}:{quote(pwd, safe='')}@{host}/{dbpath}"
             return psycopg2.connect(safe_url)
+        # Fallback: ensure sslmode for direct connect too
+        if 'sslmode' not in db_url:
+            db_url += ('&' if '?' in db_url else '?') + 'sslmode=require'
         return psycopg2.connect(db_url)
     except Exception as e:
         print(f"  ⚠️  DB connection failed: {e}")
