@@ -1370,9 +1370,63 @@
                     <div class="back-detail">
                       <ul>
                         <li>Formspree contact form: <code>POST /f/mvzbjenk</code></li>
-                        <li>Visitor counter: cross-origin fetch to Render <code>/visitor-count</code></li>
-                        <li>Responsive layout with CSS variables</li>
+                        <li>Visitor counter: cross-origin fetch to Render <code>/visitor-count</code> with retry</li>
+                        <li>Nav links: Skill Zone, Chill Zone, Architecture</li>
                         <li>Dark/light theme toggle with LocalStorage</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- skills.html (Skill Zone) -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip"><span class="card-strip-label">skills.html</span><span class="card-strip-icon">&#x2B50;</span><span class="flip-hint">click to flip</span></div>
+                  <div class="card-content">
+                    <div class="card-title">Skill Zone</div>
+                    <div class="card-sub">Hub page for AI-powered tools. Tile cards linking to Image Analyzer, Video Research, ELI5, Prompt Engineer.</div>
+                    <span class="node-tag tag-orange">Hub Page</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                  <div class="card-content">
+                    <div class="back-detail">
+                      <ul>
+                        <li>Tile grid layout with hover animations</li>
+                        <li>Routes to: image-analyzer, research, eli5, prompt-engineer</li>
+                        <li>All linked pages call Render backend &rarr; Claude API</li>
+                        <li>Rainbow &ldquo;Powered by Claude Opus 4.6&rdquo; text</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- fun-zone.html (Chill Zone) -->
+            <div class="flip-card" onclick="flipCard(this)">
+              <div class="flip-card-inner">
+                <div class="flip-front">
+                  <div class="card-strip"><span class="card-strip-label">fun-zone.html</span><span class="card-strip-icon">&#x1F3AE;</span><span class="flip-hint">click to flip</span></div>
+                  <div class="card-content">
+                    <div class="card-title">Chill Zone</div>
+                    <div class="card-sub">Hub page for fun &amp; relaxation. Tile cards linking to Sudoku and Mood Radio.</div>
+                    <span class="node-tag tag-green">Hub Page</span>
+                  </div>
+                </div>
+                <div class="flip-back">
+                  <div class="card-strip"><span class="card-strip-label">Technical Details</span><span class="flip-hint">click to flip back</span></div>
+                  <div class="card-content">
+                    <div class="back-detail">
+                      <ul>
+                        <li>Tile grid layout matching Skill Zone design</li>
+                        <li>Routes to: sudoku, music</li>
+                        <li>No backend dependencies &mdash; pure client-side pages</li>
+                        <li>Rainbow &ldquo;Powered by Claude Opus 4.6&rdquo; text</li>
                       </ul>
                     </div>
                   </div>
@@ -1387,7 +1441,7 @@
                   <div class="card-strip"><span class="card-strip-label">image-analyzer.html</span><span class="card-strip-icon">&#x1F5BC;&#xFE0F;</span><span class="flip-hint">click to flip</span></div>
                   <div class="card-content">
                     <div class="card-title">Image Analyzer</div>
-                    <div class="card-sub">AI image analysis tool. File upload, drag-drop, canvas resize. Calls Render backend.</div>
+                    <div class="card-sub">AI image analysis tool. File upload, drag-drop, canvas resize. Calls Render backend. <em>(Skill Zone)</em></div>
                     <span class="node-tag tag-orange">AI Feature</span>
                   </div>
                 </div>
@@ -1415,7 +1469,7 @@
                   <div class="card-strip"><span class="card-strip-label">music.html</span><span class="card-strip-icon">&#x1F3B5;</span><span class="flip-hint">click to flip</span></div>
                   <div class="card-content">
                     <div class="card-title">Mood Radio</div>
-                    <div class="card-sub">Mood-based music streaming app. Embedded player, playlist logic. No backend dependency.</div>
+                    <div class="card-sub">Mood-based music streaming app. Embedded player, playlist logic. No backend dependency. <em>(Chill Zone)</em></div>
                     <span class="node-tag tag-green">Static Page</span>
                   </div>
                 </div>
@@ -1442,7 +1496,7 @@
                   <div class="card-strip"><span class="card-strip-label">research.html</span><span class="card-strip-icon">&#x1F52C;</span><span class="flip-hint">click to flip</span></div>
                   <div class="card-content">
                     <div class="card-title">Video Research Center</div>
-                    <div class="card-sub">Topic search, YouTube video discovery, AI-powered transcript/description summarization.</div>
+                    <div class="card-sub">Topic search, YouTube video discovery, AI-powered transcript/description summarization. <em>(Skill Zone)</em></div>
                     <span class="node-tag tag-orange">AI Feature</span>
                   </div>
                 </div>
@@ -1469,7 +1523,7 @@
                   <div class="card-strip"><span class="card-strip-label">sudoku.html</span><span class="card-strip-icon">&#x1F9E9;</span><span class="flip-hint">click to flip</span></div>
                   <div class="card-content">
                     <div class="card-title">Sudoku</div>
-                    <div class="card-sub">Interactive Sudoku game. Pure JS client-side logic, no backend dependency.</div>
+                    <div class="card-sub">Interactive Sudoku game. Pure JS client-side logic, no backend dependency. <em>(Chill Zone)</em></div>
                     <span class="node-tag tag-green">Static Page</span>
                   </div>
                 </div>
@@ -1523,7 +1577,7 @@
                   <div class="card-strip"><span class="card-strip-label">eli5.html</span><span class="card-strip-icon">&#x1F476;</span><span class="flip-hint">click to flip</span></div>
                   <div class="card-content">
                     <div class="card-title">ELI5</div>
-                    <div class="card-sub">Explain Like I'm 5. AI-powered simplified explanations of complex topics via Claude API.</div>
+                    <div class="card-sub">Explain Like I'm 5. AI-powered simplified explanations of complex topics via Claude API. <em>(Skill Zone)</em></div>
                     <span class="node-tag tag-orange">AI Feature</span>
                   </div>
                 </div>
@@ -1549,7 +1603,7 @@
                   <div class="card-strip"><span class="card-strip-label">prompt-engineer.html</span><span class="card-strip-icon">&#x1F4DD;</span><span class="flip-hint">click to flip</span></div>
                   <div class="card-content">
                     <div class="card-title">Prompt Engineer</div>
-                    <div class="card-sub">Prompt engineering playground. Craft and iterate on AI prompts.</div>
+                    <div class="card-sub">Prompt engineering playground. Craft and iterate on AI prompts. <em>(Skill Zone)</em></div>
                     <span class="node-tag tag-orange">AI Feature</span>
                   </div>
                 </div>
