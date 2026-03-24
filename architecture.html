@@ -9,12 +9,12 @@
        CSS CUSTOM PROPERTIES
     ═══════════════════════════════════════════════════════════ */
     :root {
-      --bg: #0a192f;
-      --bg-deep: #060f1f;
-      --surface: #112240;
-      --surface2: #1d3461;
-      --border: #1e3a5f;
-      --border-bright: #264f78;
+      --bg: #111111;
+      --bg-deep: #0a0a0a;
+      --surface: #1c1c1c;
+      --surface2: #2a2a2a;
+      --border: #2e2e2e;
+      --border-bright: #3a3a3a;
       --text: #ccd6f6;
       --text-dim: #8892b0;
       --accent: #64ffda;
@@ -26,8 +26,8 @@
       --accent-yellow: #e3b341;
       --accent-red: #f85149;
       --accent-teal: #39d3c3;
-      --grid-color: rgba(100, 255, 218, 0.04);
-      --grid-line: rgba(100, 255, 218, 0.08);
+      --grid-color: rgba(100, 255, 218, 0.03);
+      --grid-line: rgba(100, 255, 218, 0.06);
       --sidebar-w: 220px;
       --mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', Consolas, monospace;
       --flip-speed: 0.6s;
@@ -262,7 +262,7 @@
     [data-theme="light"] .theme-toggle .icon-sun { opacity: 0; transform: rotate(30deg) scale(0.8); }
     [data-theme="light"] .theme-toggle .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
 
-    .hamburger-btn { display: none; }
+    .hamburger-btn { display: flex; }
 
     /* ═══════════════════════════════════════════════════════════
        HEADER
@@ -1076,11 +1076,6 @@
         <polyline points="9 22 9 12 15 12 15 22"/>
       </svg>
     </a>
-    <button class="btn-icon" id="pages-btn" aria-label="Open pages menu">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-      </svg>
-    </button>
   </div>
   <div class="top-bar-right">
     <button class="btn-icon theme-toggle" id="theme-toggle" aria-label="Toggle theme">
@@ -2031,22 +2026,27 @@
 
   function openNav() { navDrawer.classList.add('open'); navOverlay.classList.add('open'); }
   function closeNav() { navDrawer.classList.remove('open'); navOverlay.classList.remove('open'); }
-  pagesBtn.addEventListener('click', openNav);
+  if (pagesBtn) pagesBtn.addEventListener('click', openNav);
   navClose.addEventListener('click', closeNav);
   navOverlay.addEventListener('click', closeNav);
 
-  // Mobile hamburger opens sidebar on small screens
+  // Hamburger: on mobile opens sidebar, on desktop opens nav drawer
   const sidebar = document.getElementById('sidebar');
   hamburgerBtn.addEventListener('click', () => {
-    sidebar.classList.toggle('mobile-open');
-    if (sidebar.classList.contains('mobile-open')) {
-      navOverlay.classList.add('open');
+    if (window.innerWidth <= 900) {
+      sidebar.classList.toggle('mobile-open');
+      if (sidebar.classList.contains('mobile-open')) {
+        navOverlay.classList.add('open');
+      } else {
+        navOverlay.classList.remove('open');
+      }
     } else {
-      navOverlay.classList.remove('open');
+      openNav();
     }
   });
   navOverlay.addEventListener('click', () => {
     sidebar.classList.remove('mobile-open');
+    closeNav();
   });
 
   // ── Theme Toggle ────────────────────────────────────────
@@ -2144,8 +2144,20 @@
         entry.target.classList.add('visible');
       }
     });
-  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+  }, { threshold: 0.05 });
   fadeEls.forEach(el => fadeObserver.observe(el));
+  // Fallback: ensure visible elements get the class even if observer is slow
+  function revealVisible() {
+    fadeEls.forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight + 100) el.classList.add('visible');
+    });
+  }
+  revealVisible();
+  setTimeout(revealVisible, 100);
+  setTimeout(revealVisible, 500);
+  window.addEventListener('load', revealVisible);
+  window.addEventListener('scroll', revealVisible, { passive: true });
 
   // ── Star Cursor + Particle Trail ────────────────────────
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
