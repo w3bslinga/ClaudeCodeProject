@@ -1015,6 +1015,63 @@
       opacity: 1;
       transform: translateY(0);
     }
+
+    /* ── Video Story Link (info-chip variant) ─────────────── */
+    .info-chip-link {
+      color: var(--accent);
+      font-weight: 600;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .info-chip-link:hover {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    /* ── Video Modal ───────────────────────────────────────── */
+    .video-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+    }
+    .video-modal-overlay.active {
+      display: flex;
+    }
+    .video-modal-container {
+      position: relative;
+      width: 90%;
+      max-width: 800px;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(100, 255, 218, 0.15);
+    }
+    .video-modal-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .video-modal-close {
+      position: absolute;
+      top: -36px;
+      right: 0;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.8rem;
+      cursor: pointer;
+      line-height: 1;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      z-index: 1;
+    }
+    .video-modal-close:hover {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
@@ -1656,6 +1713,14 @@
             <div class="info-chip"><div class="dot dot-orange"></div> Image resize: Canvas API client-side before upload (&le;5 MB base64)</div>
             <div class="info-chip"><div class="dot dot-orange"></div> Video Research: sticky search, fireball Super Summary, video modal player</div>
           </div>
+          <div class="info-row">
+            <div class="info-chip info-chip-link" onclick="openVideoModal()" style="cursor:pointer; width:100%; justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 461.001 461.001" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+                <path d="M365.257,67.393H95.744C42.866,67.393,0,110.259,0,163.137v134.728 c0,52.878,42.866,95.744,95.744,95.744h269.513c52.878,0,95.744-42.866,95.744-95.744V163.137 C461.001,110.259,418.135,67.393,365.257,67.393z M300.506,237.056l-126.06,60.123c-3.359,1.602-7.239-0.847-7.239-4.568V168.607 c0-3.774,3.982-6.22,7.348-4.514l126.06,63.881C304.363,229.873,304.298,235.248,300.506,237.056z" fill="#FF0000"/>
+              </svg>
+              The Iterative Fix Story
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2223,6 +2288,30 @@
   window.addEventListener('load', revealVisible);
   window.addEventListener('scroll', revealVisible, { passive: true });
 
+  // ── Video Modal ────────────────────────────────────────
+  function openVideoModal() {
+    const modal = document.getElementById('video-modal');
+    const iframe = document.getElementById('video-iframe');
+    iframe.src = 'https://www.youtube.com/embed/DndpyFsS0NY?autoplay=1';
+    modal.classList.add('active');
+  }
+  function closeVideoModal(e, force) {
+    const modal = document.getElementById('video-modal');
+    if (force || e.target === modal) {
+      modal.classList.remove('active');
+      document.getElementById('video-iframe').src = '';
+    }
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('video-modal');
+      if (modal.classList.contains('active')) {
+        modal.classList.remove('active');
+        document.getElementById('video-iframe').src = '';
+      }
+    }
+  });
+
   // ── Star Cursor + Particle Trail ────────────────────────
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     const darkColors  = ['#64ffda','#38bdf8','#34d399','#818cf8','#f472b6'];
@@ -2257,6 +2346,14 @@
     });
   }
 </script>
+
+<!-- Video Modal -->
+<div id="video-modal" class="video-modal-overlay" onclick="closeVideoModal(event)">
+  <div class="video-modal-container">
+    <button class="video-modal-close" onclick="closeVideoModal(event, true)">&times;</button>
+    <iframe id="video-iframe" allowfullscreen></iframe>
+  </div>
+</div>
 
 </body>
 </html>
