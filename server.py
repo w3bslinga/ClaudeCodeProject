@@ -28,6 +28,71 @@ except ImportError:
     import psycopg2
 
 
+def fetch_transcript_via_captions_api(video_id, access_token):
+    """Fetch transcript using YouTube Captions API with user's OAuth token.
+    Returns transcript text string, or None on any failure.
+    """
+    try:
+        list_url = (
+            f"https://www.googleapis.com/youtube/v3/captions"
+            f"?part=snippet&videoId={video_id}"
+        )
+        req = urllib.request.Request(list_url, headers={
+            "Authorization": f"Bearer {access_token}",
+        })
+        with urllib.request.urlopen(req, timeout=10) as r:
+            tracks = json.loads(r.read().decode())
+
+        items = tracks.get("items", [])
+        if not items:
+            return None
+
+        track_id = None
+        for item in items:
+            lang = item["snippet"].get("language", "")
+            kind = item["snippet"].get("trackKind", "")
+            if lang.startswith("en") and kind != "asr":
+                track_id = item["id"]
+                break
+        if not track_id:
+            for item in items:
+                lang = item["snippet"].get("language", "")
+                if lang.startswith("en"):
+                    track_id = item["id"]
+                    break
+        if not track_id:
+            track_id = items[0]["id"]
+
+        dl_url = (
+            f"https://www.googleapis.com/youtube/v3/captions/{track_id}"
+            f"?tfmt=srt"
+        )
+        req2 = urllib.request.Request(dl_url, headers={
+            "Authorization": f"Bearer {access_token}",
+        })
+        with urllib.request.urlopen(req2, timeout=10) as r:
+            srt_content = r.read().decode("utf-8", errors="replace")
+
+        import re
+        lines = srt_content.split("\n")
+        text_lines = []
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if re.match(r"^\d+$", line):
+                continue
+            if re.match(r"^\d{2}:\d{2}:\d{2}", line):
+                continue
+            clean = re.sub(r"<[^>]+>", "", line)
+            if clean.strip():
+                text_lines.append(clean.strip())
+        return " ".join(text_lines) or None
+
+    except Exception:
+        return None
+
+
 def get_db_connection():
     """Get a PostgreSQL connection using DATABASE_URL, or None if unavailable."""
     db_url = os.environ.get("DATABASE_URL")
@@ -374,6 +439,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 "quiet": True,
                 "no_warnings": True,
             }
+            if os.environ.get("LOCAL"):
+                ydl_opts["cookiesfrombrowser"] = ("chrome",)
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
 
@@ -500,6 +567,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         topic = body.get("topic", "").strip()
         direct_video_id = body.get("videoId", "").strip()
         max_results = min(body.get("maxVideos", 5), 5)
+        google_token = body.get("googleToken")  # optional, never logged
         fetch_count = min(max_results * 2, 8)
 
         if not topic and not direct_video_id:
@@ -601,6 +669,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         transcripts = {}
         yt_transcript = YouTubeTranscriptApi()
         for vid_id in video_ids:
+            # Method 0: YouTube Captions API (requires user OAuth token, not IP-blocked)
+            if google_token:
+                text = fetch_transcript_via_captions_api(vid_id, google_token)
+                if text:
+                    transcripts[vid_id] = text[:15000]
+                    print(f"  ✅ Transcript for {vid_id} via Captions API ({len(text)} chars)")
+                    continue
+
             # Try yt-dlp first
             try:
                 url = f"https://www.youtube.com/watch?v={vid_id}"
@@ -613,6 +689,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "quiet": True,
                     "no_warnings": True,
                 }
+                if os.environ.get("LOCAL"):
+                    ydl_opts["cookiesfrombrowser"] = ("chrome",)
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(url, download=False)
                     subs = info.get("subtitles", {})
