@@ -942,6 +942,7 @@
         client_id: '1075109470139-5ujl2uui2dj83kkrcrrhd09135so30qs.apps.googleusercontent.com',
         scope: 'https://www.googleapis.com/auth/youtube.readonly',
         callback: (tokenResponse) => {
+          console.log('GSI callback fired', tokenResponse.error || 'ok', !!tokenResponse.access_token);
           if (tokenResponse.error) return;
           googleAccessToken = tokenResponse.access_token;
           document.getElementById('gsi-user-label').textContent = '✓ Signed in';
