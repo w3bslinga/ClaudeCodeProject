@@ -10,6 +10,7 @@ import json
 import os
 import subprocess
 import sys
+import re
 import urllib.request
 import urllib.error
 from pathlib import Path
@@ -73,7 +74,6 @@ def fetch_transcript_via_captions_api(video_id, access_token):
         with urllib.request.urlopen(req2, timeout=10) as r:
             srt_content = r.read().decode("utf-8", errors="replace")
 
-        import re
         lines = srt_content.split("\n")
         text_lines = []
         for line in lines:
@@ -89,6 +89,9 @@ def fetch_transcript_via_captions_api(video_id, access_token):
                 text_lines.append(clean.strip())
         return " ".join(text_lines) or None
 
+    except urllib.error.HTTPError as e:
+        print(f"  ⚠️ Captions API HTTP {e.code} for {video_id}")
+        return None
     except Exception:
         return None
 

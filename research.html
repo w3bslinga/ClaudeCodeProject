@@ -959,8 +959,12 @@
 
     document.getElementById('gsi-signout-link').addEventListener('click', (e) => {
       e.preventDefault();
+      const tokenToRevoke = googleAccessToken;
       googleAccessToken = null;
-      if (window.google) google.accounts.id.disableAutoSelect();
+      if (window.google) {
+        google.accounts.id.disableAutoSelect();
+        if (tokenToRevoke) google.accounts.oauth2.revoke(tokenToRevoke, () => {});
+      }
       document.getElementById('gsi-signedout').style.display = 'block';
       document.getElementById('gsi-signedin').style.display = 'none';
     });
