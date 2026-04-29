@@ -730,6 +730,7 @@
       100% { opacity: 0;    transform: translate(-50%, calc(-50% - 18px)) scale(0.2); }
     }
   </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -819,6 +820,18 @@
           </svg>
           Research
         </button>
+      </div>
+    </div>
+
+    <!-- Google Sign-In -->
+    <div id="gsi-section" style="text-align:center; padding: 0.6rem 1rem 0.2rem; font-size:0.82rem; color:var(--muted);">
+      <div id="gsi-signedout">
+        <span style="margin-right:0.5rem;">🔒 Sign in with Google for best results</span>
+        <div id="gsi-button" style="display:inline-block; vertical-align:middle;"></div>
+      </div>
+      <div id="gsi-signedin" style="display:none;">
+        <span id="gsi-user-label" style="color:var(--success, #16a34a); margin-right:0.75rem;">✓ Signed in</span>
+        <a href="#" id="gsi-signout-link" style="color:var(--muted); font-size:0.78rem;">Sign out</a>
       </div>
     </div>
 
@@ -915,6 +928,42 @@
     let cachedSuperSummary = null; // cache so it doesn't regenerate on each click
     let isYouTubeLink = false; // track if current search is a direct link
     const fireballBtn = document.getElementById('fireball-btn');
+
+    // ── Google Sign-In ──
+    let googleAccessToken = null;
+    let tokenClient = null;
+
+    function initTokenClient() {
+      if (!window.google) { setTimeout(initTokenClient, 300); return; }
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: '1075109470139-5ujl2uui2dj83kkrcrrhd09135so30qs.apps.googleusercontent.com',
+        scope: 'https://www.googleapis.com/auth/youtube.readonly',
+        callback: (tokenResponse) => {
+          if (tokenResponse.error) return;
+          googleAccessToken = tokenResponse.access_token;
+          document.getElementById('gsi-user-label').textContent = '✓ Signed in';
+          document.getElementById('gsi-signedout').style.display = 'none';
+          document.getElementById('gsi-signedin').style.display = 'block';
+        },
+      });
+      google.accounts.id.renderButton(
+        document.getElementById('gsi-button'),
+        { theme: 'outline', size: 'small', text: 'signin_with' }
+      );
+      document.getElementById('gsi-button').addEventListener('click', (e) => {
+        e.stopPropagation();
+        tokenClient.requestAccessToken();
+      }, true);
+    }
+    initTokenClient();
+
+    document.getElementById('gsi-signout-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      googleAccessToken = null;
+      if (window.google) google.accounts.id.disableAutoSelect();
+      document.getElementById('gsi-signedout').style.display = 'block';
+      document.getElementById('gsi-signedin').style.display = 'none';
+    });
 
     // ── Animated typing placeholder ──
     const placeholderTexts = [
@@ -1020,10 +1069,13 @@
           body = JSON.stringify({ topic, maxVideos: 5 });
         }
 
+        const requestBody = JSON.parse(body);
+        if (googleAccessToken) requestBody.googleToken = googleAccessToken;
+
         const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body
+          body: JSON.stringify(requestBody)
         });
 
         const data = await res.json();
@@ -1098,9 +1150,12 @@
         ? `<ul class="bullet-list">${video.bullets.map(b => `<li>${escHtml(b)}</li>`).join('')}</ul>`
         : '<p class="no-transcript">Summary unavailable.</p>';
 
+      const descTooltip = googleAccessToken
+        ? ''
+        : ' title="Sign in with Google for transcript-based summaries"';
       const sourceLabel = video.hasTranscript
         ? '<span class="source-label source-transcript">Summarized from transcript</span>'
-        : '<span class="source-label source-description">Summarized from description</span>';
+        : `<span class="source-label source-description"${descTooltip}>Summarized from description</span>`;
 
       const metaParts = [video.channel, video.duration];
       if (video.views) metaParts.push(formatViews(video.views));
