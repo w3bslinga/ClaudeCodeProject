@@ -592,6 +592,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         direct_video_id = body.get("videoId", "").strip()
         max_results = min(body.get("maxVideos", 5), 5)
         google_token = body.get("googleToken")  # optional, never logged
+        print(f"  🔑 google_token present: {bool(google_token)}")
         fetch_count = min(max_results * 2, 8)
 
         if not topic and not direct_video_id:
