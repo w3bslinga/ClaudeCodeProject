@@ -571,6 +571,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def _handle_research(self):
         """Search YouTube, fetch transcripts (or descriptions as fallback), summarize with Claude."""
+        print("  🚀 _handle_research called")
         try:
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length))
