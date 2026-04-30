@@ -571,7 +571,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def _handle_research(self):
         """Search YouTube, fetch transcripts (or descriptions as fallback), summarize with Claude."""
-        print("  🚀 _handle_research called")
         try:
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length))
@@ -593,7 +592,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         direct_video_id = body.get("videoId", "").strip()
         max_results = min(body.get("maxVideos", 5), 5)
         google_token = body.get("googleToken")  # optional, never logged
-        print(f"  🔑 google_token present: {bool(google_token)}")
         fetch_count = min(max_results * 2, 8)
 
         if not topic and not direct_video_id:
