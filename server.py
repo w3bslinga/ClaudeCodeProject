@@ -30,69 +30,90 @@ except ImportError:
 
 
 def fetch_transcript_via_captions_api(video_id, access_token):
-    """Fetch transcript using YouTube Captions API with user's OAuth token.
+    """Fetch transcript using YouTube's innertube player API with user's OAuth token.
+    This bypasses datacenter IP blocking by using an authenticated request.
     Returns transcript text string, or None on any failure.
     """
     try:
-        list_url = (
-            f"https://www.googleapis.com/youtube/v3/captions"
-            f"?part=snippet&videoId={video_id}"
+        # Step 1: Get player data including caption track URLs via innertube API
+        player_url = "https://www.youtube.com/youtubei/v1/player"
+        payload = json.dumps({
+            "videoId": video_id,
+            "context": {
+                "client": {
+                    "clientName": "WEB",
+                    "clientVersion": "2.20231219.04.00",
+                    "hl": "en",
+                }
+            }
+        }).encode()
+        req = urllib.request.Request(
+            player_url,
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+                "X-Origin": "https://www.youtube.com",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            }
         )
-        req = urllib.request.Request(list_url, headers={
-            "Authorization": f"Bearer {access_token}",
-        })
-        with urllib.request.urlopen(req, timeout=10) as r:
-            tracks = json.loads(r.read().decode())
+        with urllib.request.urlopen(req, timeout=15) as r:
+            player_data = json.loads(r.read().decode())
 
-        items = tracks.get("items", [])
-        if not items:
+        # Step 2: Extract caption track URLs from player response
+        captions = (
+            player_data
+            .get("captions", {})
+            .get("playerCaptionsTracklistRenderer", {})
+            .get("captionTracks", [])
+        )
+        if not captions:
+            print(f"  ⚠️ No caption tracks in player data for {video_id}")
             return None
 
-        track_id = None
-        for item in items:
-            lang = item["snippet"].get("language", "")
-            kind = item["snippet"].get("trackKind", "")
-            if lang.startswith("en") and kind != "asr":
-                track_id = item["id"]
-                break
-        if not track_id:
-            for item in items:
-                lang = item["snippet"].get("language", "")
+        # Prefer manual English, then auto-generated English
+        track_url = None
+        for kind in ("asr_track_absent", "asr"):
+            for track in captions:
+                lang = track.get("languageCode", "")
+                is_asr = track.get("kind", "") == "asr"
                 if lang.startswith("en"):
-                    track_id = item["id"]
-                    break
-        if not track_id:
-            track_id = items[0]["id"]
+                    if kind == "asr_track_absent" and not is_asr:
+                        track_url = track.get("baseUrl")
+                        break
+                    elif kind == "asr" and is_asr:
+                        track_url = track.get("baseUrl")
+                        break
+            if track_url:
+                break
+        if not track_url and captions:
+            track_url = captions[0].get("baseUrl")
+        if not track_url:
+            return None
 
-        dl_url = (
-            f"https://www.googleapis.com/youtube/v3/captions/{track_id}"
-            f"?tfmt=srt"
-        )
-        req2 = urllib.request.Request(dl_url, headers={
-            "Authorization": f"Bearer {access_token}",
+        # Step 3: Fetch caption content (JSON3 format)
+        caption_url = track_url + "&fmt=json3"
+        req2 = urllib.request.Request(caption_url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         })
-        with urllib.request.urlopen(req2, timeout=10) as r:
-            srt_content = r.read().decode("utf-8", errors="replace")
+        with urllib.request.urlopen(req2, timeout=15) as r:
+            caption_data = json.loads(r.read().decode())
 
-        lines = srt_content.split("\n")
-        text_lines = []
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            if re.match(r"^\d+$", line):
-                continue
-            if re.match(r"^\d{2}:\d{2}:\d{2}", line):
-                continue
-            clean = re.sub(r"<[^>]+>", "", line)
-            if clean.strip():
-                text_lines.append(clean.strip())
-        return " ".join(text_lines) or None
+        # Step 4: Extract plain text from JSON3 caption format
+        segments = []
+        for event in caption_data.get("events", []):
+            for seg in event.get("segs", []):
+                t = seg.get("utf8", "").strip()
+                if t and t != "\n":
+                    segments.append(t)
+        text = " ".join(segments)
+        return text.strip() or None
 
     except urllib.error.HTTPError as e:
-        print(f"  ⚠️ Captions API HTTP {e.code} for {video_id}")
+        print(f"  ⚠️ Innertube API HTTP {e.code} for {video_id}")
         return None
-    except Exception:
+    except Exception as e:
+        print(f"  ⚠️ Innertube API failed for {video_id}: {type(e).__name__}: {e}")
         return None
 
 
