@@ -1071,6 +1071,7 @@
 
         const requestBody = JSON.parse(body);
         if (googleAccessToken) requestBody.googleToken = googleAccessToken;
+        console.log('Research request - token present:', !!googleAccessToken);
 
         const res = await fetch(endpoint, {
           method: 'POST',
